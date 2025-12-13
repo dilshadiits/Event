@@ -97,60 +97,64 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
     return (
         <main className="min-h-screen p-4 md:p-8 max-w-6xl mx-auto space-y-6 md:space-y-8">
             {/* Details Header */}
-            <div className="flex flex-col md:flex-row justify-between md:items-center gap-6">
+            <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-4">
                     <Link href="/" className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
                         <ArrowLeft className="w-6 h-6 text-muted-foreground" />
                     </Link>
                     <div>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
-                                Attendee Management
-                                <button
-                                    onClick={copyRegistrationLink}
-                                    className="flex items-center gap-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 text-xs md:text-sm px-3 py-1.5 rounded-full transition-all border border-blue-500/30"
-                                >
-                                    {copied ? <Check className="w-3 h-3" /> : <LinkIcon className="w-3 h-3" />}
-                                    {copied ? 'Copied Link' : 'Copy Reg. Link'}
-                                </button>
-                                <Link
-                                    href={`/scan?eventId=${id}&eventName=${encodeURIComponent(eventName)}`}
-                                    className="flex items-center gap-2 bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 text-xs md:text-sm px-3 py-1.5 rounded-full transition-all border border-purple-500/30 ml-2"
-                                >
-                                    <QrCode className="w-3 h-3" />
-                                    Scan
-                                </Link>
-                                <button
-                                    onClick={generateInviteLink}
-                                    className="flex items-center gap-2 bg-orange-600/20 hover:bg-orange-600/40 text-orange-400 text-xs md:text-sm px-3 py-1.5 rounded-full transition-all border border-orange-500/30 ml-2"
-                                >
-                                    <LinkIcon className="w-3 h-3" />
-                                    One-Time Link
-                                </button>
-                                <Link
-                                    href={`/spot/${id}`}
-                                    className="flex items-center gap-2 bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-400 text-xs md:text-sm px-3 py-1.5 rounded-full transition-all border border-yellow-500/30 ml-2"
-                                >
-                                    <Zap className="w-3 h-3" />
-                                    Spot Reg.
-                                </Link>
-                            </h1>
-                            <p className="text-sm md:text-base text-muted-foreground">Manage registrations and view tickets</p>
-                        </div>          </div>
+                        <h1 className="text-2xl md:text-3xl font-bold text-white">
+                            Attendee Management
+                        </h1>
+                        <p className="text-sm md:text-base text-muted-foreground">Manage registrations and view tickets</p>
+                    </div>
+                </div>
+
+                {/* Action Buttons - Mobile Optimized */}
+                <div className="flex flex-wrap gap-2">
+                    <button
+                        onClick={copyRegistrationLink}
+                        className="flex items-center gap-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 text-xs px-3 py-2 rounded-full transition-all border border-blue-500/30"
+                    >
+                        {copied ? <Check className="w-3 h-3" /> : <LinkIcon className="w-3 h-3" />}
+                        {copied ? 'Copied!' : 'Copy Link'}
+                    </button>
+                    <Link
+                        href={`/scan?eventId=${id}&eventName=${encodeURIComponent(eventName)}`}
+                        className="flex items-center gap-2 bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 text-xs px-3 py-2 rounded-full transition-all border border-purple-500/30"
+                    >
+                        <QrCode className="w-3 h-3" />
+                        Scan
+                    </Link>
+                    <button
+                        onClick={generateInviteLink}
+                        className="flex items-center gap-2 bg-orange-600/20 hover:bg-orange-600/40 text-orange-400 text-xs px-3 py-2 rounded-full transition-all border border-orange-500/30"
+                    >
+                        <LinkIcon className="w-3 h-3" />
+                        Invite Link
+                    </button>
+                    <Link
+                        href={`/spot/${id}`}
+                        className="flex items-center gap-2 bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-400 text-xs px-3 py-2 rounded-full transition-all border border-yellow-500/30"
+                    >
+                        <Zap className="w-3 h-3" />
+                        Spot Reg.
+                    </Link>
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 gap-4 w-full md:w-auto">
-                    <div className="bg-card border border-border px-4 py-3 rounded-xl text-center md:text-left">
-                        <div className="text-xs md:text-sm text-muted-foreground">Total</div>
+                <div className="grid grid-cols-2 gap-3 md:gap-4">
+                    <div className="bg-card border border-border px-4 py-3 rounded-xl text-center">
+                        <div className="text-xs text-muted-foreground">Total</div>
                         <div className="text-xl md:text-2xl font-bold text-white">{attendees.length}</div>
                     </div>
-                    <div className="bg-green-900/20 border border-green-900/50 px-4 py-3 rounded-xl text-center md:text-left">
-                        <div className="text-xs md:text-sm text-green-400">Checked In</div>
+                    <div className="bg-green-900/20 border border-green-900/50 px-4 py-3 rounded-xl text-center">
+                        <div className="text-xs text-green-400">Checked In</div>
                         <div className="text-xl md:text-2xl font-bold text-green-400">{checkedInCount}</div>
                     </div>
                 </div>
             </div>
+
 
             <div className="space-y-6">
                 <div className="relative">
@@ -250,6 +254,6 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                 name={selectedAttendee?.name || ''}
                 eventName={eventName}
             />
-        </main>
+        </main >
     );
 }
