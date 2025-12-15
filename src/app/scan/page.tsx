@@ -6,7 +6,7 @@ import { CheckCircle, XCircle, Home, RotateCcw, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import clsx from 'clsx';
 
-interface ScanResultData {
+interface AttendeeData {
     name: string;
     email?: string;
     guest_names?: string;
@@ -17,7 +17,7 @@ function ScanContent() {
     const eventId = searchParams.get('eventId');
     const eventName = searchParams.get('eventName');
 
-    const [scanResult, setScanResult] = useState<{ success: boolean; message: string; data?: ScanResultData } | null>(null);
+    const [scanResult, setScanResult] = useState<{ success: boolean; message: string; attendee?: AttendeeData } | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
 
     const handleScan = useCallback(async (data: string) => {
@@ -101,12 +101,12 @@ function ScanContent() {
                             {scanResult.message}
                         </p>
 
-                        {scanResult.data && (
+                        {scanResult.attendee && (
                             <div className="bg-black/20 rounded-xl p-6 mb-8 backdrop-blur-sm border border-white/10">
                                 <div className="text-sm text-white/50 uppercase tracking-wider font-bold mb-1">Attendee</div>
-                                <div className="text-2xl text-white font-bold">{scanResult.data.name}</div>
-                                <div className="text-white/70">{scanResult.data.email}</div>
-                                {scanResult.data.guest_names && <div className="text-white/70 mt-2 text-sm">Guest: {scanResult.data.guest_names}</div>}
+                                <div className="text-2xl text-white font-bold">{scanResult.attendee.name}</div>
+                                <div className="text-white/70">{scanResult.attendee.email}</div>
+                                {scanResult.attendee.guest_names && <div className="text-white/70 mt-2 text-sm">Guest: {scanResult.attendee.guest_names}</div>}
                             </div>
                         )}
 
