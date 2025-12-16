@@ -18,7 +18,7 @@ export async function GET() {
         }));
 
         return NextResponse.json(formatted);
-    } catch (_error) {
+    } catch {
         return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 });
     }
 }
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
             name: newEvent.name,
             date: newEvent.date
         }, { status: 201 });
-    } catch (_error) {
+    } catch {
         return NextResponse.json({ error: 'Failed to create event' }, { status: 500 });
     }
 }
@@ -66,7 +66,7 @@ export async function DELETE(req: Request) {
         }
 
         return NextResponse.json({ success: true });
-    } catch (_error) {
+    } catch {
         return NextResponse.json({ error: 'Failed to delete event' }, { status: 500 });
     }
 }

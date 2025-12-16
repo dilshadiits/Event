@@ -2,7 +2,7 @@
 import { useState, use } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useSearchParams } from 'next/navigation'; // Added
-import { Download, CheckCircle, UserPlus, FileText, Phone, Instagram, Youtube, Users, Tag } from 'lucide-react';
+import { Download, CheckCircle, UserPlus, FileText, Phone, Instagram, Youtube, Users, Tag, Utensils } from 'lucide-react';
 
 export default function RegistrationPage({ params }: { params: Promise<{ id: string }> }) { // Kept original component name
     const { id } = use(params);
@@ -16,7 +16,8 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
         instagram: '',
         youtube: '',
         category: '',
-        guest_names: ''
+        guest_names: '',
+        meal_preference: 'veg'
     });
 
     const [registeredUser, setRegisteredUser] = useState<{ id: string; name: string } | null>(null);
@@ -50,7 +51,7 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
             } else {
                 setError(data.error || 'Registration failed');
             }
-        } catch (_err) {
+        } catch {
             setError('Something went wrong. Please try again.');
         } finally {
             setLoading(false);
@@ -193,6 +194,29 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
                                         </select>
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Meal Preference */}
+                            <div className="pt-2 border-t border-white/10">
+                                <label className="text-sm font-medium text-white mb-1.5 block">Meal Preference *</label>
+                                <div className="relative">
+                                    <Utensils className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
+                                    <select
+                                        name="meal_preference"
+                                        value={formData.meal_preference}
+                                        onChange={handleChange}
+                                        required
+                                        className="w-full bg-muted/50 border border-border rounded-xl pl-10 pr-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none"
+                                    >
+                                        <option value="veg" className="bg-black">🥗 Vegetarian</option>
+                                        <option value="non-veg" className="bg-black">🍗 Non-Vegetarian</option>
+                                    </select>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1.5">
+                                    {formData.meal_preference === 'veg'
+                                        ? '🟢 Veg meals include fresh veggies and paneer options'
+                                        : '🔴 Non-veg meals include chicken and egg options'}
+                                </p>
                             </div>
 
                             {/* Guest */}

@@ -18,6 +18,7 @@ const AttendeeSchema = new mongoose.Schema({
     youtube: { type: String },
     category: { type: String },
     guest_names: { type: String },
+    meal_preference: { type: String, enum: ['veg', 'non-veg'], default: 'veg' },
     status: { type: String, enum: ['registered', 'checked-in'], default: 'registered' },
     checked_in_at: { type: Date },
     created_at: { type: Date, default: Date.now },

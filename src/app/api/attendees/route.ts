@@ -23,6 +23,7 @@ export async function GET(req: Request) {
             youtube: a.youtube,
             category: a.category,
             guest_names: a.guest_names,
+            meal_preference: a.meal_preference,
             eventId: a.eventId,
             status: a.status,
             checked_in_at: a.checked_in_at,
@@ -30,14 +31,14 @@ export async function GET(req: Request) {
         }));
 
         return NextResponse.json(formatted);
-    } catch (_error) {
+    } catch {
         return NextResponse.json({ error: 'Failed to fetch attendees' }, { status: 500 });
     }
 }
 
 export async function POST(req: Request) {
     try {
-        const { name, email, phone, instagram, youtube, category, guest_names, eventId, inviteCode } = await req.json();
+        const { name, email, phone, instagram, youtube, category, guest_names, meal_preference, eventId, inviteCode } = await req.json();
 
         if (!name || !phone || !eventId) {
             return NextResponse.json({ error: 'Name, Phone, and Event ID are required' }, { status: 400 });
@@ -77,6 +78,7 @@ export async function POST(req: Request) {
             youtube,
             category,
             guest_names,
+            meal_preference,
             eventId
         });
 
@@ -94,6 +96,7 @@ export async function POST(req: Request) {
             youtube: newAttendee.youtube,
             category: newAttendee.category,
             guest_names: newAttendee.guest_names,
+            meal_preference: newAttendee.meal_preference,
             eventId: newAttendee.eventId,
             status: newAttendee.status
         }, { status: 201 });
@@ -120,7 +123,7 @@ export async function DELETE(req: Request) {
         }
 
         return NextResponse.json({ success: true });
-    } catch (_error) {
+    } catch {
         return NextResponse.json({ error: 'Failed to delete attendee' }, { status: 500 });
     }
 }

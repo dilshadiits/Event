@@ -36,7 +36,7 @@ function ScanContent() {
             });
             const result = await res.json();
             setScanResult(result);
-        } catch (_err) {
+        } catch {
             setScanResult({ success: false, message: 'Network Error' });
         } finally {
             setIsProcessing(false);

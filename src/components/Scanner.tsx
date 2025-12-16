@@ -44,7 +44,7 @@ export default function Scanner({ onScan, paused }: ScannerProps) {
                                 onScanRef.current(decodedText);
                             }
                         },
-                        (_errorMessage) => {
+                        () => {
                             // Ignore parse errors
                         }
                     );

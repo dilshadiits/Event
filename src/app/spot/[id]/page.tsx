@@ -68,7 +68,7 @@ export default function SpotRegistrationPage({ params }: { params: Promise<{ id:
             } else {
                 setError(data.error || 'Registration failed');
             }
-        } catch (_err) {
+        } catch {
             setError('Something went wrong. Please try again.');
         } finally {
             setLoading(false);
