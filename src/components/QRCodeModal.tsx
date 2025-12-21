@@ -42,7 +42,7 @@ export default function QRCodeModal({ value, name, eventName, isOpen, onClose }:
                         <p className="text-blue-400 font-medium">{eventName}</p>
                     </div>
 
-                    <div className="flex justify-center p-4 bg-white rounded-xl mx-auto w-fit shadow-inner">
+                    <div className="flex flex-col items-center p-4 bg-white rounded-xl mx-auto w-fit shadow-inner">
                         <QRCodeCanvas
                             id="qr-canvas"
                             value={value}
@@ -50,6 +50,7 @@ export default function QRCodeModal({ value, name, eventName, isOpen, onClose }:
                             level={"H"}
                             includeMargin={true}
                         />
+                        <p className="text-black font-bold text-lg mt-2">{name}</p>
                     </div>
 
                     <div className="text-sm text-muted-foreground">

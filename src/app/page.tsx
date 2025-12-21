@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Calendar, QrCode, ArrowRight, Link as LinkIcon, Check, Trash2 } from 'lucide-react';
+import { Plus, Calendar, QrCode, ArrowRight, Link as LinkIcon, Check, Trash2, Trophy, LogOut } from 'lucide-react';
 
 interface Event {
   id: string;
@@ -49,9 +49,16 @@ export default function Home() {
     try {
       const res = await fetch('/api/events');
       const data = await res.json();
-      setEvents(data);
+      // Only set events if response is an array (not an error object)
+      if (Array.isArray(data)) {
+        setEvents(data);
+      } else {
+        console.error('API error:', data.error);
+        setEvents([]);
+      }
     } catch (err) {
       console.error(err);
+      setEvents([]);
     } finally {
       setLoading(false);
     }
@@ -89,13 +96,33 @@ export default function Home() {
             Create events, generate QR codes, and track attendance.
           </p>
         </div>
-        <Link
-          href="/scan"
-          className="w-full md:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full transition-all shadow-lg hover:shadow-blue-500/20 font-medium"
-        >
-          <QrCode className="w-5 h-5" />
-          Open Scanner
-        </Link>
+        <div className="flex flex-wrap gap-2 sm:gap-3 w-full md:w-auto">
+          <Link
+            href="/awards"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-full transition-all shadow-lg hover:shadow-purple-500/20 font-medium text-sm sm:text-base"
+          >
+            <Trophy className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>Awards</span>
+          </Link>
+          <Link
+            href="/scan"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-full transition-all shadow-lg hover:shadow-blue-500/20 font-medium text-sm sm:text-base"
+          >
+            <QrCode className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>Scan</span>
+          </Link>
+          <button
+            onClick={() => {
+              localStorage.removeItem('app_auth_token');
+              window.dispatchEvent(new Event('storage'));
+            }}
+            className="flex items-center justify-center gap-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 px-3 sm:px-4 py-2.5 sm:py-3 rounded-full transition-all border border-red-500/30 font-medium text-sm sm:text-base"
+            title="Logout"
+          >
+            <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">Logout</span>
+          </button>
+        </div>
       </header>
 
       {/* Create Event Section */}

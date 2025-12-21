@@ -1,15 +1,13 @@
-import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { Event, Attendee } from '@/models';
+import { createEventSchema, sanitizeString, isValidObjectId } from '@/lib/validate';
+import { errorResponse, successResponse } from '@/lib/api-utils';
 
 export async function GET() {
     try {
         await dbConnect();
-        const events = await Event.find({}).sort({ created_at: -1 });
+        const events = await Event.find({}).sort({ created_at: -1 }).lean();
 
-        // Convert _id to id for frontend compatibility if needed, 
-        // but Mongoose returns _id. Frontend expects 'id'.
-        // Let's map it or ensure frontend handles _id.
         const formatted = events.map(e => ({
             id: e._id.toString(),
             name: e.name,
@@ -17,42 +15,56 @@ export async function GET() {
             created_at: e.created_at
         }));
 
-        return NextResponse.json(formatted);
-    } catch {
-        return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 });
+        return successResponse(formatted);
+    } catch (error) {
+        console.error('[Events GET]', error);
+        return errorResponse('Failed to fetch events');
     }
 }
 
 export async function POST(req: Request) {
     try {
-        const { name, date } = await req.json();
+        const body = await req.json();
 
-        if (!name || !date) {
-            return NextResponse.json({ error: 'Name and Date are required' }, { status: 400 });
+        // Validate input with Zod
+        const result = createEventSchema.safeParse(body);
+        if (!result.success) {
+            const message = result.error.issues.map((e) => e.message).join(', ');
+            return errorResponse(message, 400);
         }
 
-        await dbConnect();
-        const newEvent = await Event.create({ name, date });
+        const { name, date } = result.data;
 
-        return NextResponse.json({
+        await dbConnect();
+        const newEvent = await Event.create({
+            name: sanitizeString(name),
+            date
+        });
+
+        return successResponse({
             id: newEvent._id.toString(),
             name: newEvent.name,
             date: newEvent.date
-        }, { status: 201 });
-    } catch {
-        return NextResponse.json({ error: 'Failed to create event' }, { status: 500 });
+        }, 201);
+    } catch (error) {
+        console.error('[Events POST]', error);
+        return errorResponse('Failed to create event');
     }
 }
 
 export async function DELETE(req: Request) {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-
-    if (!id) {
-        return NextResponse.json({ error: 'Event ID required' }, { status: 400 });
-    }
-
     try {
+        const { searchParams } = new URL(req.url);
+        const id = searchParams.get('id');
+
+        if (!id) {
+            return errorResponse('Event ID required', 400);
+        }
+
+        if (!isValidObjectId(id)) {
+            return errorResponse('Invalid Event ID format', 400);
+        }
+
         await dbConnect();
 
         // Delete all attendees associated with this event
@@ -62,11 +74,12 @@ export async function DELETE(req: Request) {
         const deletedEvent = await Event.findByIdAndDelete(id);
 
         if (!deletedEvent) {
-            return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+            return errorResponse('Event not found', 404);
         }
 
-        return NextResponse.json({ success: true });
-    } catch {
-        return NextResponse.json({ error: 'Failed to delete event' }, { status: 500 });
+        return successResponse({ success: true });
+    } catch (error) {
+        console.error('[Events DELETE]', error);
+        return errorResponse('Failed to delete event');
     }
 }

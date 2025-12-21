@@ -10,10 +10,10 @@ const EventSchema = new Schema({
 export const Event = mongoose.models.Event || mongoose.model('Event', EventSchema);
 
 const AttendeeSchema = new mongoose.Schema({
-    eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true },
+    eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true, index: true },
     name: { type: String, required: true },
     email: { type: String, required: false },
-    phone: { type: String, required: true },
+    phone: { type: String, required: true, index: true },
     instagram: { type: String },
     youtube: { type: String },
     category: { type: String },
@@ -31,5 +31,57 @@ const InviteCodeSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
 });
 
+// Compound index for faster invite lookups
+InviteCodeSchema.index({ code: 1, eventId: 1 });
+
 export const Attendee = mongoose.models.Attendee || mongoose.model('Attendee', AttendeeSchema);
 export const InviteCode = mongoose.models.InviteCode || mongoose.model('InviteCode', InviteCodeSchema);
+
+// Award Category Schema - defines voting categories for an event
+const AwardCategorySchema = new mongoose.Schema({
+    eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true, index: true },
+    name: { type: String, required: true },
+    description: { type: String },
+    isActive: { type: Boolean, default: true },
+    showResults: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now },
+});
+
+// Vote Schema - tracks individual votes
+const VoteSchema = new mongoose.Schema({
+    categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'AwardCategory', required: true },
+    eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true },
+    nomineeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Attendee', required: true },
+    voterPhone: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now },
+});
+
+// Compound index to enforce one vote per phone per category
+VoteSchema.index({ categoryId: 1, voterPhone: 1 }, { unique: true });
+
+export const AwardCategory = mongoose.models.AwardCategory || mongoose.model('AwardCategory', AwardCategorySchema);
+export const Vote = mongoose.models.Vote || mongoose.model('Vote', VoteSchema);
+
+// Standalone Award Event Schema - separate from attendance events
+const AwardEventSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    description: { type: String },
+    headerImage: { type: String }, // Event banner/header image URL
+    sponsorImages: [{ type: String }], // Array of sponsor logo URLs
+    isActive: { type: Boolean, default: true },
+    createdAt: { type: Date, default: Date.now },
+});
+
+// Nominee Schema - separate nominees for award voting
+const NomineeSchema = new mongoose.Schema({
+    awardEventId: { type: mongoose.Schema.Types.ObjectId, ref: 'AwardEvent', required: true, index: true },
+    categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'AwardCategory', index: true },
+    name: { type: String, required: true },
+    description: { type: String },
+    imageUrl: { type: String },
+    createdAt: { type: Date, default: Date.now },
+});
+
+export const AwardEvent = mongoose.models.AwardEvent || mongoose.model('AwardEvent', AwardEventSchema);
+export const Nominee = mongoose.models.Nominee || mongoose.model('Nominee', NomineeSchema);
+

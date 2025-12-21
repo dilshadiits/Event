@@ -72,17 +72,17 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
     };
 
     return (
-        <main className="min-h-screen flex items-center justify-center p-4 md:p-6 bg-gradient-premium">
-            <div className="bg-card w-full max-w-lg p-6 md:p-8 rounded-2xl border border-border shadow-2xl relative overflow-hidden my-8">
+        <main className="min-h-screen flex items-center justify-center p-3 sm:p-4 md:p-6 bg-gradient-premium">
+            <div className="bg-card w-full max-w-lg p-4 sm:p-6 md:p-8 rounded-2xl border border-border shadow-2xl relative overflow-hidden my-4 sm:my-8">
 
                 {/* Background decorative elements */}
                 <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-purple-600"></div>
 
                 {!registeredUser ? (
                     <>
-                        <div className="text-center mb-8">
-                            <h1 className="text-3xl font-bold text-white mb-2">Influencer Meet</h1>
-                            <p className="text-muted-foreground">Register to join the exclusive event</p>
+                        <div className="text-center mb-6 sm:mb-8">
+                            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Influencer Meet</h1>
+                            <p className="text-sm sm:text-base text-muted-foreground">Register to join the exclusive event</p>
                         </div>
 
                         <form onSubmit={handleRegister} className="space-y-5">
@@ -262,7 +262,7 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
                             Your spot is confirmed.
                         </p>
 
-                        <div className="flex justify-center p-6 bg-white rounded-xl mx-auto w-fit mb-8 shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                        <div className="flex flex-col items-center p-6 bg-white rounded-xl mx-auto w-fit mb-8 shadow-[0_0_30px_rgba(255,255,255,0.1)]">
                             <QRCodeCanvas
                                 id="qr-canvas-public"
                                 value={registeredUser.id}
@@ -270,6 +270,7 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
                                 level={"H"}
                                 includeMargin={true}
                             />
+                            <p className="text-black font-bold text-lg mt-2">{registeredUser.name}</p>
                         </div>
 
                         <button

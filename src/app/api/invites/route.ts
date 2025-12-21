@@ -1,14 +1,32 @@
-import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { InviteCode } from '@/models';
+import { createInviteSchema, isValidObjectId } from '@/lib/validate';
+import { errorResponse, successResponse, checkRateLimit, getClientIP } from '@/lib/api-utils';
 import crypto from 'crypto';
 
 export async function POST(req: Request) {
     try {
-        const { eventId } = await req.json();
+        // Rate limiting: 20 invite codes per minute per IP
+        const clientIP = getClientIP(req);
+        const rateLimit = checkRateLimit(`invite:${clientIP}`, 20, 60000);
 
-        if (!eventId) {
-            return NextResponse.json({ error: 'Event ID required' }, { status: 400 });
+        if (!rateLimit.allowed) {
+            return errorResponse('Too many requests. Please try again later.', 429);
+        }
+
+        const body = await req.json();
+
+        // Validate input with Zod
+        const result = createInviteSchema.safeParse(body);
+        if (!result.success) {
+            const message = result.error.issues.map((e) => e.message).join(', ');
+            return errorResponse(message, 400);
+        }
+
+        const { eventId } = result.data;
+
+        if (!isValidObjectId(eventId)) {
+            return errorResponse('Invalid Event ID format', 400);
         }
 
         await dbConnect();
@@ -22,9 +40,9 @@ export async function POST(req: Request) {
             isUsed: false
         });
 
-        return NextResponse.json({ code: invite.code });
+        return successResponse({ code: invite.code });
     } catch (error) {
-        console.error(error);
-        return NextResponse.json({ error: 'Failed to create invite' }, { status: 500 });
+        console.error('[Invites POST]', error);
+        return errorResponse('Failed to create invite');
     }
 }

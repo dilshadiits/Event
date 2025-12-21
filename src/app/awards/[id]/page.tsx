@@ -1,0 +1,649 @@
+/* eslint-disable @next/next/no-img-element */
+'use client';
+import { useState, useEffect, use, useCallback } from 'react';
+import Link from 'next/link';
+import { ArrowLeft, Plus, Trophy, Award, Trash2, Eye, EyeOff, Users, Vote, Link as LinkIcon, Check, Loader2, Image as ImageIcon, Settings, Crown, Medal, BarChart3, Radio } from 'lucide-react';
+
+interface Category {
+    id: string;
+    name: string;
+    description: string;
+    isActive: boolean;
+    showResults: boolean;
+}
+
+interface Nominee {
+    id: string;
+    name: string;
+    description: string;
+    imageUrl: string;
+    categoryId: string | null;
+    categoryName: string;
+}
+
+interface VoteResult {
+    categoryId: string;
+    categoryName: string;
+    showResults: boolean;
+    totalVotes: number;
+    leaderboard: {
+        nomineeId: string;
+        nomineeName: string;
+        voteCount?: number;
+    }[];
+}
+
+export default function AwardEventPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params);
+
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [nominees, setNominees] = useState<Nominee[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    // Category form
+    const [newCatName, setNewCatName] = useState('');
+    const [newCatDesc, setNewCatDesc] = useState('');
+    const [creatingCat, setCreatingCat] = useState(false);
+
+    // Nominee form
+    const [newNomineeName, setNewNomineeName] = useState('');
+    const [newNomineeDesc, setNewNomineeDesc] = useState('');
+    const [newNomineeImage, setNewNomineeImage] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [creatingNominee, setCreatingNominee] = useState(false);
+
+    // Event settings
+    const [headerImage, setHeaderImage] = useState('');
+    const [newSponsorImage, setNewSponsorImage] = useState('');
+    const [sponsorImages, setSponsorImages] = useState<string[]>([]);
+    const [savingSettings, setSavingSettings] = useState(false);
+
+    const [copied, setCopied] = useState(false);
+    const [updating, setUpdating] = useState<string | null>(null);
+
+    // Live results
+    const [results, setResults] = useState<VoteResult[]>([]);
+    const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+
+    const fetchData = useCallback(async () => {
+        try {
+            const [catRes, nomRes, eventRes] = await Promise.all([
+                fetch(`/api/categories?eventId=${id}`),
+                fetch(`/api/nominees?awardEventId=${id}`),
+                fetch(`/api/awards/${id}`)
+            ]);
+
+            const catData = await catRes.json();
+            const nomData = await nomRes.json();
+            const eventDataRes = await eventRes.json();
+
+            if (Array.isArray(catData)) setCategories(catData);
+            if (Array.isArray(nomData)) setNominees(nomData);
+            if (eventDataRes && !eventDataRes.error) {
+                setHeaderImage(eventDataRes.headerImage || '');
+                setSponsorImages(eventDataRes.sponsorImages || []);
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    }, [id]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    // Fetch live results
+    const fetchResults = useCallback(async () => {
+        try {
+            const res = await fetch(`/api/award-votes?awardEventId=${id}&admin=true`);
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setResults(data);
+                setLastRefresh(new Date());
+            }
+        } catch (err) {
+            console.error('Error fetching results:', err);
+        }
+    }, [id]);
+
+    // Auto-refresh results every 5 seconds
+    useEffect(() => {
+        fetchResults();
+        const interval = setInterval(fetchResults, 5000);
+        return () => clearInterval(interval);
+    }, [fetchResults]);
+
+    const copyVotingLink = () => {
+        const url = `${window.location.origin}/awards/${id}/vote`;
+        navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    // Category CRUD
+    const createCategory = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newCatName.trim() || creatingCat) return;
+
+        setCreatingCat(true);
+        try {
+            await fetch('/api/categories', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ eventId: id, name: newCatName, description: newCatDesc })
+            });
+            setNewCatName('');
+            setNewCatDesc('');
+            fetchData();
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setCreatingCat(false);
+        }
+    };
+
+    const toggleCategoryActive = async (cat: Category) => {
+        setUpdating(cat.id);
+        try {
+            await fetch('/api/categories', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: cat.id, isActive: !cat.isActive })
+            });
+            fetchData();
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setUpdating(null);
+        }
+    };
+
+    const toggleCategoryResults = async (cat: Category) => {
+        setUpdating(cat.id);
+        try {
+            await fetch('/api/categories', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: cat.id, showResults: !cat.showResults })
+            });
+            fetchData();
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setUpdating(null);
+        }
+    };
+
+    const deleteCategory = async (catId: string) => {
+        if (!confirm('Delete this category?')) return;
+        try {
+            await fetch(`/api/categories?id=${catId}`, { method: 'DELETE' });
+            fetchData();
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    // Nominee CRUD
+    const createNominee = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newNomineeName.trim() || creatingNominee) return;
+
+        setCreatingNominee(true);
+        try {
+            await fetch('/api/nominees', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    awardEventId: id,
+                    categoryId: selectedCategory || undefined,
+                    name: newNomineeName,
+                    description: newNomineeDesc,
+                    imageUrl: newNomineeImage
+                })
+            });
+            setNewNomineeName('');
+            setNewNomineeDesc('');
+            setNewNomineeImage('');
+            fetchData();
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setCreatingNominee(false);
+        }
+    };
+
+    const deleteNominee = async (nomineeId: string) => {
+        if (!confirm('Delete this nominee?')) return;
+        try {
+            await fetch(`/api/nominees?id=${nomineeId}`, { method: 'DELETE' });
+            fetchData();
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    // Event settings
+    const saveEventSettings = async () => {
+        setSavingSettings(true);
+        try {
+            await fetch(`/api/awards/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    headerImage,
+                    sponsorImages
+                })
+            });
+            fetchData();
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setSavingSettings(false);
+        }
+    };
+
+    const addSponsorImage = () => {
+        if (newSponsorImage.trim() && sponsorImages.length < 10) {
+            setSponsorImages([...sponsorImages, newSponsorImage.trim()]);
+            setNewSponsorImage('');
+        }
+    };
+
+    const removeSponsorImage = (index: number) => {
+        setSponsorImages(sponsorImages.filter((_, i) => i !== index));
+    };
+
+    if (loading) {
+        return (
+            <main className="min-h-screen flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+            </main>
+        );
+    }
+
+    return (
+        <main className="min-h-screen p-3 sm:p-4 md:p-8 max-w-6xl mx-auto space-y-6 sm:space-y-8">
+            {/* Header */}
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex items-center gap-3 sm:gap-4">
+                    <Link href="/awards" className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
+                        <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
+                    </Link>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white flex items-center gap-2 sm:gap-3">
+                            <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-500" />
+                            Award Management
+                        </h1>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Manage categories and nominees</p>
+                    </div>
+                </div>
+                <div className="flex gap-3">
+                    <button
+                        onClick={copyVotingLink}
+                        className="flex items-center gap-2 bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 px-4 py-2 rounded-lg transition-all border border-purple-500/30"
+                    >
+                        {copied ? <Check className="w-4 h-4" /> : <LinkIcon className="w-4 h-4" />}
+                        {copied ? 'Copied!' : 'Copy Voting Link'}
+                    </button>
+                    <Link
+                        href={`/awards/${id}/vote`}
+                        className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                    >
+                        <Vote className="w-4 h-4" />
+                        Open Voting Page
+                    </Link>
+                </div>
+            </header>
+
+            {/* Event Settings - Images */}
+            <section className="bg-card border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-4">
+                    <Settings className="w-5 h-5 text-purple-400" />
+                    <h2 className="font-bold text-white">Event Branding</h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Header Image */}
+                    <div className="space-y-2">
+                        <label className="text-sm text-muted-foreground flex items-center gap-2">
+                            <ImageIcon className="w-4 h-4" />
+                            Header/Banner Image URL
+                        </label>
+                        <input
+                            type="url"
+                            value={headerImage}
+                            onChange={(e) => setHeaderImage(e.target.value)}
+                            placeholder="https://example.com/banner.jpg"
+                            className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                        />
+                        {headerImage && (
+                            <img src={headerImage} alt="Header preview" className="w-full h-20 object-cover rounded-lg border border-border" />
+                        )}
+                    </div>
+
+                    {/* Sponsor Images */}
+                    <div className="space-y-2">
+                        <label className="text-sm text-muted-foreground flex items-center gap-2">
+                            <ImageIcon className="w-4 h-4" />
+                            Sponsor Logo URLs ({sponsorImages.length}/10)
+                        </label>
+                        <div className="flex gap-2">
+                            <input
+                                type="url"
+                                value={newSponsorImage}
+                                onChange={(e) => setNewSponsorImage(e.target.value)}
+                                placeholder="Sponsor logo URL"
+                                className="flex-1 bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                            />
+                            <button
+                                type="button"
+                                onClick={addSponsorImage}
+                                disabled={!newSponsorImage.trim() || sponsorImages.length >= 10}
+                                className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-sm"
+                            >
+                                <Plus className="w-4 h-4" />
+                            </button>
+                        </div>
+                        {sponsorImages.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                                {sponsorImages.map((url, i) => (
+                                    <div key={i} className="relative group">
+                                        <img src={url} alt={`Sponsor ${i + 1}`} className="w-12 h-12 object-contain rounded border border-border bg-white/10" />
+                                        <button
+                                            type="button"
+                                            onClick={() => removeSponsorImage(i)}
+                                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <Trash2 className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={saveEventSettings}
+                    disabled={savingSettings}
+                    className="mt-4 flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                    {savingSettings ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    Save Branding
+                </button>
+            </section>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Categories Section */}
+                <section className="bg-card border border-border rounded-xl overflow-hidden">
+                    <div className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 p-4 border-b border-border">
+                        <h2 className="font-bold text-white flex items-center gap-2">
+                            <Award className="w-5 h-5 text-purple-400" />
+                            Award Categories
+                        </h2>
+                    </div>
+
+                    {/* Add Category Form */}
+                    <form onSubmit={createCategory} className="p-4 border-b border-border/50 space-y-3">
+                        <input
+                            type="text"
+                            value={newCatName}
+                            onChange={(e) => setNewCatName(e.target.value)}
+                            placeholder="Category name (e.g., Best Influencer)"
+                            className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                        />
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={newCatDesc}
+                                onChange={(e) => setNewCatDesc(e.target.value)}
+                                placeholder="Description (optional)"
+                                className="flex-1 bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                            />
+                            <button
+                                type="submit"
+                                disabled={!newCatName.trim() || creatingCat}
+                                className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                            >
+                                {creatingCat ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                                Add
+                            </button>
+                        </div>
+                    </form>
+
+                    {/* Categories List */}
+                    {categories.length === 0 ? (
+                        <div className="p-6 text-center text-muted-foreground text-sm">
+                            No categories yet. Add one above.
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-border/50 max-h-[400px] overflow-y-auto">
+                            {categories.map((cat) => (
+                                <div key={cat.id} className="p-4 flex items-center gap-3 hover:bg-muted/30">
+                                    <div className="flex-1">
+                                        <span className="font-medium text-white">{cat.name}</span>
+                                        {cat.description && (
+                                            <p className="text-xs text-muted-foreground">{cat.description}</p>
+                                        )}
+                                    </div>
+                                    <button
+                                        onClick={() => toggleCategoryActive(cat)}
+                                        disabled={updating === cat.id}
+                                        className={`text-xs px-2 py-1 rounded border ${cat.isActive ? 'bg-green-500/10 text-green-400 border-green-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30'}`}
+                                    >
+                                        {cat.isActive ? 'Open' : 'Closed'}
+                                    </button>
+                                    <button
+                                        onClick={() => toggleCategoryResults(cat)}
+                                        disabled={updating === cat.id}
+                                        className={`p-1.5 rounded border ${cat.showResults ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' : 'bg-muted/50 text-muted-foreground border-border'}`}
+                                        title={cat.showResults ? 'Results visible' : 'Results hidden'}
+                                    >
+                                        {cat.showResults ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                                    </button>
+                                    <button
+                                        onClick={() => deleteCategory(cat.id)}
+                                        className="p-1.5 text-muted-foreground hover:text-red-400 hover:bg-red-500/10 rounded"
+                                    >
+                                        <Trash2 className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </section>
+
+                {/* Nominees Section */}
+                <section className="bg-card border border-border rounded-xl overflow-hidden">
+                    <div className="bg-gradient-to-r from-yellow-600/20 to-orange-600/20 p-4 border-b border-border">
+                        <h2 className="font-bold text-white flex items-center gap-2">
+                            <Users className="w-5 h-5 text-yellow-400" />
+                            Nominees
+                        </h2>
+                    </div>
+
+                    {/* Add Nominee Form */}
+                    <form onSubmit={createNominee} className="p-4 border-b border-border/50 space-y-3">
+                        <input
+                            type="text"
+                            value={newNomineeName}
+                            onChange={(e) => setNewNomineeName(e.target.value)}
+                            placeholder="Nominee name"
+                            className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-yellow-500 outline-none"
+                        />
+                        <input
+                            type="url"
+                            value={newNomineeImage}
+                            onChange={(e) => setNewNomineeImage(e.target.value)}
+                            placeholder="Nominee image URL (optional)"
+                            className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-yellow-500 outline-none"
+                        />
+                        <div className="flex gap-2">
+                            <select
+                                value={selectedCategory}
+                                onChange={(e) => setSelectedCategory(e.target.value)}
+                                className="flex-1 bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-yellow-500 outline-none"
+                            >
+                                <option value="">All Categories</option>
+                                {categories.map(cat => (
+                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                ))}
+                            </select>
+                            <button
+                                type="submit"
+                                disabled={!newNomineeName.trim() || creatingNominee}
+                                className="flex items-center gap-1 bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                            >
+                                {creatingNominee ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                                Add
+                            </button>
+                        </div>
+                    </form>
+
+                    {/* Nominees List */}
+                    {nominees.length === 0 ? (
+                        <div className="p-6 text-center text-muted-foreground text-sm">
+                            No nominees yet. Add one above.
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-border/50 max-h-[400px] overflow-y-auto">
+                            {nominees.map((nominee) => (
+                                <div key={nominee.id} className="p-4 flex items-center gap-3 hover:bg-muted/30">
+                                    <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400 font-bold">
+                                        {nominee.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="flex-1">
+                                        <span className="font-medium text-white">{nominee.name}</span>
+                                        <p className="text-xs text-muted-foreground">{nominee.categoryName}</p>
+                                    </div>
+                                    <button
+                                        onClick={() => deleteNominee(nominee.id)}
+                                        className="p-1.5 text-muted-foreground hover:text-red-400 hover:bg-red-500/10 rounded"
+                                    >
+                                        <Trash2 className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </section>
+            </div>
+
+            {/* Live Poll Results */}
+            <section className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="bg-gradient-to-r from-green-600/20 to-emerald-600/20 p-4 border-b border-border">
+                    <div className="flex items-center justify-between">
+                        <h2 className="font-bold text-white flex items-center gap-2">
+                            <BarChart3 className="w-5 h-5 text-green-400" />
+                            Live Poll Results
+                        </h2>
+                        <div className="flex items-center gap-3">
+                            <span className="flex items-center gap-1.5 text-xs text-green-400 bg-green-500/10 px-2 py-1 rounded-full border border-green-500/30">
+                                <Radio className="w-3 h-3 animate-pulse" />
+                                Live
+                            </span>
+                            {lastRefresh && (
+                                <span className="text-xs text-muted-foreground">
+                                    Updated {lastRefresh.toLocaleTimeString()}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {results.length === 0 ? (
+                    <div className="p-6 text-center text-muted-foreground text-sm">
+                        No votes yet. Results will appear here as votes come in.
+                    </div>
+                ) : (
+                    <div className="divide-y divide-border/50">
+                        {results.map((result) => {
+                            const maxVotes = result.leaderboard.length > 0
+                                ? Math.max(...result.leaderboard.map(l => l.voteCount || 0))
+                                : 0;
+
+                            return (
+                                <div key={result.categoryId} className="p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <Award className="w-4 h-4 text-purple-400" />
+                                            <span className="font-medium text-white">{result.categoryName}</span>
+                                        </div>
+                                        <span className="text-sm text-muted-foreground">
+                                            {result.totalVotes} vote{result.totalVotes !== 1 ? 's' : ''}
+                                        </span>
+                                    </div>
+
+                                    {result.leaderboard.length === 0 ? (
+                                        <p className="text-sm text-muted-foreground">No votes in this category yet.</p>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {result.leaderboard.slice(0, 5).map((entry, idx) => {
+                                                const percentage = maxVotes > 0 && entry.voteCount
+                                                    ? (entry.voteCount / maxVotes) * 100
+                                                    : 0;
+
+                                                return (
+                                                    <div key={entry.nomineeId} className="flex items-center gap-3">
+                                                        <div className="w-5 flex justify-center">
+                                                            {idx === 0 ? <Crown className="w-4 h-4 text-yellow-400" /> :
+                                                                idx === 1 ? <Medal className="w-4 h-4 text-gray-300" /> :
+                                                                    idx === 2 ? <Medal className="w-4 h-4 text-amber-600" /> :
+                                                                        <span className="text-xs text-muted-foreground">{idx + 1}</span>}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center justify-between mb-1">
+                                                                <span className="text-sm font-medium text-white">{entry.nomineeName}</span>
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    {entry.voteCount || 0} votes
+                                                                </span>
+                                                            </div>
+                                                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                                                <div
+                                                                    className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full transition-all duration-500"
+                                                                    style={{ width: `${percentage}%` }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </section>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-card border border-border rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-white">{categories.length}</div>
+                    <div className="text-xs text-muted-foreground">Categories</div>
+                </div>
+                <div className="bg-card border border-border rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-white">{nominees.length}</div>
+                    <div className="text-xs text-muted-foreground">Nominees</div>
+                </div>
+                <div className="bg-card border border-border rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-green-400">{categories.filter(c => c.isActive).length}</div>
+                    <div className="text-xs text-muted-foreground">Open for Voting</div>
+                </div>
+                <div className="bg-card border border-border rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-blue-400">{categories.filter(c => c.showResults).length}</div>
+                    <div className="text-xs text-muted-foreground">Results Public</div>
+                </div>
+                <div className="bg-card border border-border rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-purple-400">{results.reduce((sum, r) => sum + r.totalVotes, 0)}</div>
+                    <div className="text-xs text-muted-foreground">Total Votes</div>
+                </div>
+            </div>
+        </main>
+    );
+}

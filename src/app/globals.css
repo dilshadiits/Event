@@ -82,6 +82,13 @@
   * {
     -webkit-overflow-scrolling: touch;
   }
+
+  /* Better spacing on mobile */
+  .space-y-8 {
+    --tw-space-y-reverse: 0;
+    margin-top: calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));
+    margin-bottom: calc(1.5rem * var(--tw-space-y-reverse));
+  }
 }
 
 /* Prevent horizontal overflow */
@@ -95,4 +102,71 @@ body {
 :focus-visible {
   outline: 2px solid hsl(217 91% 60%);
   outline-offset: 2px;
+}
+
+/* Touch feedback for buttons */
+button:active,
+a:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+/* Smooth transitions globally */
+button,
+a,
+input,
+select {
+  transition: all 0.15s ease-out;
+}
+
+/* Loading skeleton animation */
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Pull-to-refresh visual feedback */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Better card shadows on mobile */
+@media (max-width: 640px) {
+  .shadow-xl {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Haptic-like feedback for interactive elements */
+.hover\:scale-\[1\.02\]:active {
+  transform: scale(0.99);
+}
+
+/* Safe area padding for bottom navigation */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* Prevent text selection on UI elements */
+button,
+.select-none {
+  -webkit-user-select: none;
+  user-select: none;
 }

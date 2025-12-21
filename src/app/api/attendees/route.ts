@@ -1,18 +1,23 @@
-import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { Attendee, InviteCode } from '@/models';
+import { createAttendeeSchema, sanitizeString, isValidObjectId } from '@/lib/validate';
+import { errorResponse, successResponse, checkRateLimit, getClientIP } from '@/lib/api-utils';
 
 export async function GET(req: Request) {
-    const { searchParams } = new URL(req.url);
-    const eventId = searchParams.get('eventId');
-
-    if (!eventId) {
-        return NextResponse.json({ error: 'Event ID required' }, { status: 400 });
-    }
-
     try {
+        const { searchParams } = new URL(req.url);
+        const eventId = searchParams.get('eventId');
+
+        if (!eventId) {
+            return errorResponse('Event ID required', 400);
+        }
+
+        if (!isValidObjectId(eventId)) {
+            return errorResponse('Invalid Event ID format', 400);
+        }
+
         await dbConnect();
-        const attendees = await Attendee.find({ eventId }).sort({ created_at: -1 });
+        const attendees = await Attendee.find({ eventId }).sort({ created_at: -1 }).lean();
 
         const formatted = attendees.map(a => ({
             id: a._id.toString(),
@@ -30,64 +35,71 @@ export async function GET(req: Request) {
             created_at: a.created_at
         }));
 
-        return NextResponse.json(formatted);
-    } catch {
-        return NextResponse.json({ error: 'Failed to fetch attendees' }, { status: 500 });
+        return successResponse(formatted);
+    } catch (error) {
+        console.error('[Attendees GET]', error);
+        return errorResponse('Failed to fetch attendees');
     }
 }
 
 export async function POST(req: Request) {
     try {
-        const { name, email, phone, instagram, youtube, category, guest_names, meal_preference, eventId, inviteCode } = await req.json();
+        // Rate limiting: 10 registrations per minute per IP
+        const clientIP = getClientIP(req);
+        const rateLimit = checkRateLimit(`attendee:${clientIP}`, 10, 60000);
 
-        if (!name || !phone || !eventId) {
-            return NextResponse.json({ error: 'Name, Phone, and Event ID are required' }, { status: 400 });
+        if (!rateLimit.allowed) {
+            return errorResponse('Too many requests. Please try again later.', 429);
+        }
+
+        const body = await req.json();
+
+        // Validate input with Zod
+        const result = createAttendeeSchema.safeParse(body);
+        if (!result.success) {
+            const message = result.error.issues.map((e) => e.message).join(', ');
+            return errorResponse(message, 400);
+        }
+
+        const { name, email, phone, instagram, youtube, category, guest_names, meal_preference, eventId, inviteCode } = result.data;
+
+        if (!isValidObjectId(eventId)) {
+            return errorResponse('Invalid Event ID format', 400);
         }
 
         await dbConnect();
 
-        // 1. Validate Invite Code (If provided)
-        // Note: You can enforce it to be required if strictly private, but we'll leave it optional for public flows unless frontend enforces it.
-        // Based on user request "cant be valid again", we assume this specific flow uses a code.
-        // If inviteCode IS in the request, we VALIDATE it.
-
+        // Validate Invite Code (if provided)
         if (inviteCode) {
             const invite = await InviteCode.findOne({ code: inviteCode, eventId });
 
             if (!invite) {
-                return NextResponse.json({ error: 'Invalid invite code.' }, { status: 400 });
+                return errorResponse('Invalid invite code.', 400);
             }
 
             if (invite.isUsed) {
-                return NextResponse.json({ error: 'This invite link has already been used.' }, { status: 409 });
+                return errorResponse('This invite link has already been used.', 409);
             }
-
-            // Mark as used immediately (or ideally inside a transaction, but Mongo standalone doesn't support transactions easily without replica set. 
-            // We'll mark used after creation success to avoid "burning" codes on failed creation, 
-            // OR mark here to prevent race conditions.
-            // Let's mark it used at end to ensure we don't block retry on failure, 
-            // BUT for strict "single use" we should lock it. 
-            // Given simple scale, we'll mark used AFTER successful creation.
         }
 
         const newAttendee = await Attendee.create({
-            name,
-            email,
-            phone,
-            instagram,
-            youtube,
-            category,
-            guest_names,
+            name: sanitizeString(name),
+            email: email || undefined,
+            phone: phone.trim(),
+            instagram: instagram ? sanitizeString(instagram) : undefined,
+            youtube: youtube ? sanitizeString(youtube) : undefined,
+            category: category ? sanitizeString(category) : undefined,
+            guest_names: guest_names ? sanitizeString(guest_names) : undefined,
             meal_preference,
             eventId
         });
 
-        // 2. Consume Invite Code
+        // Consume Invite Code
         if (inviteCode) {
             await InviteCode.updateOne({ code: inviteCode }, { isUsed: true });
         }
 
-        return NextResponse.json({
+        return successResponse({
             id: newAttendee._id.toString(),
             name: newAttendee.name,
             email: newAttendee.email,
@@ -99,31 +111,36 @@ export async function POST(req: Request) {
             meal_preference: newAttendee.meal_preference,
             eventId: newAttendee.eventId,
             status: newAttendee.status
-        }, { status: 201 });
+        }, 201);
     } catch (error) {
-        console.error(error);
-        return NextResponse.json({ error: 'Failed to register attendee' }, { status: 500 });
+        console.error('[Attendees POST]', error);
+        return errorResponse('Failed to register attendee');
     }
 }
 
 export async function DELETE(req: Request) {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-
-    if (!id) {
-        return NextResponse.json({ error: 'Attendee ID required' }, { status: 400 });
-    }
-
     try {
+        const { searchParams } = new URL(req.url);
+        const id = searchParams.get('id');
+
+        if (!id) {
+            return errorResponse('Attendee ID required', 400);
+        }
+
+        if (!isValidObjectId(id)) {
+            return errorResponse('Invalid Attendee ID format', 400);
+        }
+
         await dbConnect();
         const deletedAttendee = await Attendee.findByIdAndDelete(id);
 
         if (!deletedAttendee) {
-            return NextResponse.json({ error: 'Attendee not found' }, { status: 404 });
+            return errorResponse('Attendee not found', 404);
         }
 
-        return NextResponse.json({ success: true });
-    } catch {
-        return NextResponse.json({ error: 'Failed to delete attendee' }, { status: 500 });
+        return successResponse({ success: true });
+    } catch (error) {
+        console.error('[Attendees DELETE]', error);
+        return errorResponse('Failed to delete attendee');
     }
 }

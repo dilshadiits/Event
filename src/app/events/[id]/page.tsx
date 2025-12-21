@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, use, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Search, QrCode, CheckCircle, Instagram, Phone, Users, Link as LinkIcon, Check, Trash2, Zap } from 'lucide-react';
+import { ArrowLeft, Search, QrCode, CheckCircle, Instagram, Phone, Users, Link as LinkIcon, Check, Trash2, Zap, RefreshCw } from 'lucide-react';
 import QRCodeModal from '@/components/QRCodeModal';
 
 interface Attendee {
@@ -23,6 +23,8 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
     const [attendees, setAttendees] = useState<Attendee[]>([]);
     const eventName = 'Event Details';
     const [loading, setLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const [search, setSearch] = useState('');
     const [copied, setCopied] = useState(false);
 
@@ -30,22 +32,27 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
     // Modal State
     const [selectedAttendee, setSelectedAttendee] = useState<Attendee | null>(null);
 
-    const fetchAttendees = useCallback(async () => {
+    const fetchAttendees = useCallback(async (showRefresh = false) => {
+        if (showRefresh) setIsRefreshing(true);
         try {
-            const res = await fetch(`/api/attendees?eventId=${id}`, { cache: 'no-store' });
+            const res = await fetch(`/api/attendees?eventId=${id}`);
             const data = await res.json();
-            setAttendees(data);
+            if (Array.isArray(data)) {
+                setAttendees(data);
+                setLastUpdated(new Date());
+            }
         } catch (err) {
             console.error(err);
         } finally {
             setLoading(false);
+            setIsRefreshing(false);
         }
     }, [id]);
 
     useEffect(() => {
         fetchAttendees();
-        // Poll every 3 seconds for real-time updates
-        const interval = setInterval(fetchAttendees, 3000);
+        // Poll every 5 seconds for real-time status updates
+        const interval = setInterval(() => fetchAttendees(), 5000);
         return () => clearInterval(interval);
     }, [fetchAttendees]);
 
@@ -143,7 +150,7 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 gap-3 md:gap-4">
+                <div className="grid grid-cols-3 gap-3 md:gap-4">
                     <div className="bg-card border border-border px-4 py-3 rounded-xl text-center">
                         <div className="text-xs text-muted-foreground">Total</div>
                         <div className="text-xl md:text-2xl font-bold text-white">{attendees.length}</div>
@@ -152,9 +159,20 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                         <div className="text-xs text-green-400">Checked In</div>
                         <div className="text-xl md:text-2xl font-bold text-green-400">{checkedInCount}</div>
                     </div>
+                    <button
+                        onClick={() => fetchAttendees(true)}
+                        className="bg-blue-900/20 border border-blue-900/50 px-4 py-3 rounded-xl text-center hover:bg-blue-900/30 transition-all"
+                    >
+                        <div className="text-xs text-blue-400 flex items-center justify-center gap-1">
+                            <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+                            {isRefreshing ? 'Updating...' : 'Live'}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                            {lastUpdated ? `${Math.round((Date.now() - lastUpdated.getTime()) / 1000)}s ago` : '...'}
+                        </div>
+                    </button>
                 </div>
             </div>
-
 
             <div className="space-y-6">
                 <div className="relative">
