@@ -140,6 +140,7 @@ export default function QRCodeModal({ value, name, eventName, isOpen, onClose }:
                                 <p>Generating Entry Pass...</p>
                             </div>
                         ) : entryPassDataUrl ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
                             <img
                                 src={entryPassDataUrl}
                                 alt="Entry Pass"

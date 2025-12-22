@@ -51,7 +51,8 @@ function ScanContent() {
         <main className={clsx(
             "min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-500",
             scanResult?.success === true && "bg-green-900",
-            scanResult?.success === false && "bg-red-900",
+            scanResult?.success === false && scanResult?.message?.toLowerCase().includes('already') && "bg-blue-900",
+            scanResult?.success === false && !scanResult?.message?.toLowerCase().includes('already') && "bg-red-900",
             !scanResult && "bg-black"
         )}>
 
@@ -88,13 +89,15 @@ function ScanContent() {
                         <div className="mb-6 flex justify-center">
                             {scanResult.success ? (
                                 <CheckCircle className="w-32 h-32 text-green-400 drop-shadow-[0_0_20px_rgba(74,222,128,0.5)]" />
+                            ) : scanResult.message?.toLowerCase().includes('already') ? (
+                                <CheckCircle className="w-32 h-32 text-blue-400 drop-shadow-[0_0_20px_rgba(59,130,246,0.5)]" />
                             ) : (
                                 <XCircle className="w-32 h-32 text-red-500 drop-shadow-[0_0_20px_rgba(239,68,68,0.5)]" />
                             )}
                         </div>
 
                         <h2 className="text-4xl font-bold text-white mb-2">
-                            {scanResult.success ? 'Access Granted' : 'Access Denied'}
+                            {scanResult.success ? 'Access Granted' : scanResult.message?.toLowerCase().includes('already') ? 'Already Checked In' : 'Access Denied'}
                         </h2>
 
                         <p className="text-xl text-white/80 mb-8 font-medium">

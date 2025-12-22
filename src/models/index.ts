@@ -21,6 +21,8 @@ const AttendeeSchema = new mongoose.Schema({
     meal_preference: { type: String, enum: ['veg', 'non-veg'], default: 'veg' },
     status: { type: String, enum: ['registered', 'checked-in'], default: 'registered' },
     checked_in_at: { type: Date },
+    guest_checked_in: { type: Boolean, default: false },
+    guest_checked_in_at: { type: Date },
     created_at: { type: Date, default: Date.now },
 });
 

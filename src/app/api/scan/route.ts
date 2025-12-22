@@ -16,8 +16,17 @@ export async function POST(req: Request) {
 
         const { scanData, eventId } = result.data;
 
+        // Check if this is a guest QR code (format: {attendeeId}-GUEST-{number})
+        const isGuestQR = scanData.includes('-GUEST-');
+        let attendeeId = scanData;
+
+        if (isGuestQR) {
+            const parts = scanData.split('-GUEST-');
+            attendeeId = parts[0];
+        }
+
         // Validate ObjectId format
-        if (!isValidObjectId(scanData)) {
+        if (!isValidObjectId(attendeeId)) {
             return successResponse({
                 success: false,
                 message: 'Invalid QR Code Format.'
@@ -26,7 +35,7 @@ export async function POST(req: Request) {
 
         await dbConnect();
 
-        const attendee = await Attendee.findById(scanData);
+        const attendee = await Attendee.findById(attendeeId);
 
         if (!attendee) {
             return successResponse({
@@ -43,7 +52,45 @@ export async function POST(req: Request) {
             });
         }
 
-        // Check if already checked in
+        // For guest QR codes, verify the attendee has a guest registered
+        if (isGuestQR) {
+            if (!attendee.guest_names || !attendee.guest_names.trim()) {
+                return successResponse({
+                    success: false,
+                    message: 'Invalid Guest QR: No guest registered for this attendee.'
+                });
+            }
+
+            // Check if guest already checked in
+            if (attendee.guest_checked_in) {
+                return successResponse({
+                    success: false,
+                    message: `Guest already checked in at ${new Date(attendee.guest_checked_in_at).toLocaleTimeString()}`,
+                    attendee: {
+                        name: attendee.guest_names,
+                        email: `Guest of ${attendee.name}`,
+                        guest_names: ''
+                    }
+                });
+            }
+
+            // Mark guest as checked in
+            attendee.guest_checked_in = true;
+            attendee.guest_checked_in_at = new Date();
+            await attendee.save();
+
+            return successResponse({
+                success: true,
+                message: 'Guest Check-in Successful!',
+                attendee: {
+                    name: attendee.guest_names,
+                    email: `Guest of ${attendee.name}`,
+                    guest_names: ''
+                }
+            });
+        }
+
+        // Check if main attendee already checked in
         if (attendee.status === 'checked-in') {
             return successResponse({
                 success: false,
@@ -52,7 +99,7 @@ export async function POST(req: Request) {
             });
         }
 
-        // Mark as checked in
+        // Mark main attendee as checked in
         attendee.status = 'checked-in';
         attendee.checked_in_at = new Date();
         await attendee.save();
