@@ -2,7 +2,7 @@
 'use client';
 import { useState, useEffect, use, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Plus, Trophy, Award, Trash2, Eye, EyeOff, Users, Vote, Link as LinkIcon, Check, Loader2, Image as ImageIcon, Settings, Crown, Medal, BarChart3, Radio } from 'lucide-react';
+import { ArrowLeft, Plus, Trophy, Award, Trash2, Eye, EyeOff, Users, Vote, Link as LinkIcon, Check, Loader2, Image as ImageIcon, Settings, Crown, Medal, BarChart3, Radio, Edit2, X } from 'lucide-react';
 
 interface Category {
     id: string;
@@ -51,6 +51,14 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
     const [newNomineeImage, setNewNomineeImage] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
     const [creatingNominee, setCreatingNominee] = useState(false);
+
+    // Nominee edit modal
+    const [editingNominee, setEditingNominee] = useState<Nominee | null>(null);
+    const [editNomineeName, setEditNomineeName] = useState('');
+    const [editNomineeDesc, setEditNomineeDesc] = useState('');
+    const [editNomineeImage, setEditNomineeImage] = useState('');
+    const [editNomineeCategory, setEditNomineeCategory] = useState('');
+    const [savingNominee, setSavingNominee] = useState(false);
 
     // Event settings
     const [headerImage, setHeaderImage] = useState('');
@@ -222,6 +230,47 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
             fetchData();
         } catch (err) {
             console.error(err);
+        }
+    };
+
+    // Open edit modal for nominee
+    const openEditNominee = (nominee: Nominee) => {
+        setEditingNominee(nominee);
+        setEditNomineeName(nominee.name);
+        setEditNomineeDesc(nominee.description || '');
+        setEditNomineeImage(nominee.imageUrl || '');
+        setEditNomineeCategory(nominee.categoryId || '');
+    };
+
+    // Save edited nominee
+    const saveEditedNominee = async () => {
+        if (!editingNominee || !editNomineeName.trim() || savingNominee) return;
+
+        setSavingNominee(true);
+        try {
+            const res = await fetch('/api/nominees', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: editingNominee.id,
+                    name: editNomineeName,
+                    description: editNomineeDesc,
+                    imageUrl: editNomineeImage,
+                    categoryId: editNomineeCategory || null
+                })
+            });
+
+            if (res.ok) {
+                setEditingNominee(null);
+                fetchData();
+            } else {
+                const data = await res.json();
+                console.error('Failed to update nominee:', data.error);
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setSavingNominee(false);
         }
     };
 
@@ -521,8 +570,16 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                                         <p className="text-xs text-muted-foreground">{nominee.categoryName}</p>
                                     </div>
                                     <button
+                                        onClick={() => openEditNominee(nominee)}
+                                        className="p-1.5 text-muted-foreground hover:text-blue-400 hover:bg-blue-500/10 rounded"
+                                        title="Edit nominee"
+                                    >
+                                        <Edit2 className="w-3 h-3" />
+                                    </button>
+                                    <button
                                         onClick={() => deleteNominee(nominee.id)}
                                         className="p-1.5 text-muted-foreground hover:text-red-400 hover:bg-red-500/10 rounded"
+                                        title="Delete nominee"
                                     >
                                         <Trash2 className="w-3 h-3" />
                                     </button>
@@ -644,6 +701,94 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                     <div className="text-xs text-muted-foreground">Total Votes</div>
                 </div>
             </div>
+
+            {/* Edit Nominee Modal */}
+            {editingNominee && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md relative animate-in fade-in zoom-in duration-200">
+                        <button
+                            onClick={() => setEditingNominee(null)}
+                            className="absolute top-4 right-4 p-1 text-muted-foreground hover:text-white rounded-lg hover:bg-muted transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <Edit2 className="w-5 h-5 text-yellow-400" />
+                            Edit Nominee
+                        </h3>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-sm text-muted-foreground block mb-1">Name *</label>
+                                <input
+                                    type="text"
+                                    value={editNomineeName}
+                                    onChange={(e) => setEditNomineeName(e.target.value)}
+                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-yellow-500 outline-none"
+                                    placeholder="Nominee name"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-muted-foreground block mb-1">Description</label>
+                                <textarea
+                                    value={editNomineeDesc}
+                                    onChange={(e) => setEditNomineeDesc(e.target.value)}
+                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-yellow-500 outline-none resize-none"
+                                    rows={2}
+                                    placeholder="Brief description (optional)"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-muted-foreground block mb-1">Image URL</label>
+                                <input
+                                    type="url"
+                                    value={editNomineeImage}
+                                    onChange={(e) => setEditNomineeImage(e.target.value)}
+                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-yellow-500 outline-none"
+                                    placeholder="https://example.com/image.jpg (optional)"
+                                />
+                                {editNomineeImage && (
+                                    <img src={editNomineeImage} alt="Preview" className="mt-2 w-16 h-16 object-cover rounded-lg border border-border" />
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-muted-foreground block mb-1">Category</label>
+                                <select
+                                    value={editNomineeCategory}
+                                    onChange={(e) => setEditNomineeCategory(e.target.value)}
+                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-yellow-500 outline-none"
+                                >
+                                    <option value="">All Categories</option>
+                                    {categories.map(cat => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={() => setEditingNominee(null)}
+                                    className="flex-1 px-4 py-2 border border-border text-muted-foreground rounded-lg hover:bg-muted transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={saveEditedNominee}
+                                    disabled={!editNomineeName.trim() || savingNominee}
+                                    className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                                >
+                                    {savingNominee ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                    Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </main>
     );
 }

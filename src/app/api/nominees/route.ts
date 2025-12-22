@@ -13,6 +13,14 @@ const createNomineeSchema = z.object({
     imageUrl: z.string().max(500).optional(),
 });
 
+const updateNomineeSchema = z.object({
+    id: z.string().min(1),
+    name: z.string().min(1).max(100).trim().optional(),
+    description: z.string().max(500).optional(),
+    imageUrl: z.string().max(500).optional(),
+    categoryId: z.string().optional().nullable(),
+});
+
 // GET /api/nominees?awardEventId=xxx&categoryId=xxx
 export const GET = withErrorHandler(async (req: NextRequest) => {
     const awardEventId = req.nextUrl.searchParams.get('awardEventId');
@@ -72,6 +80,46 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         name: nominee.name,
         description: nominee.description,
     }, 201);
+});
+
+// PUT /api/nominees - Update nominee
+export const PUT = withErrorHandler(async (req: NextRequest) => {
+    const body = await req.json();
+    const validated = updateNomineeSchema.parse(body);
+
+    if (!isValidObjectId(validated.id)) {
+        return errorResponse('Invalid nominee ID', 400);
+    }
+
+    if (validated.categoryId && !isValidObjectId(validated.categoryId)) {
+        return errorResponse('Invalid category ID', 400);
+    }
+
+    await connectDB();
+
+    const updateData: Record<string, unknown> = {};
+    if (validated.name !== undefined) updateData.name = validated.name;
+    if (validated.description !== undefined) updateData.description = validated.description;
+    if (validated.imageUrl !== undefined) updateData.imageUrl = validated.imageUrl;
+    if (validated.categoryId !== undefined) updateData.categoryId = validated.categoryId || null;
+
+    const nominee = await Nominee.findByIdAndUpdate(
+        validated.id,
+        updateData,
+        { new: true }
+    );
+
+    if (!nominee) {
+        return errorResponse('Nominee not found', 404);
+    }
+
+    return successResponse({
+        id: nominee._id.toString(),
+        name: nominee.name,
+        description: nominee.description || '',
+        imageUrl: nominee.imageUrl || '',
+        categoryId: nominee.categoryId?.toString() || null,
+    });
 });
 
 // DELETE /api/nominees?id=xxx
