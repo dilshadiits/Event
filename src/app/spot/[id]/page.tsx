@@ -1,7 +1,7 @@
 'use client';
-import { useState, use, useEffect } from 'react';
+import { useState, use, useEffect, useRef } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Download, CheckCircle, UserPlus, Phone, Users, ArrowLeft, Zap, FileText, Instagram, Youtube, Tag, Utensils } from 'lucide-react';
+import { Download, CheckCircle, UserPlus, Phone, Users, ArrowLeft, Zap, FileText, Instagram, Youtube, Tag, Utensils, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 interface EventInfo {
@@ -27,6 +27,12 @@ export default function SpotRegistrationPage({ params }: { params: Promise<{ id:
     const [registeredUser, setRegisteredUser] = useState<{ id: string; name: string } | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    // Entry pass generation states
+    const [entryPassDataUrl, setEntryPassDataUrl] = useState<string | null>(null);
+    const [isGeneratingPass, setIsGeneratingPass] = useState(false);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const qrRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         // Fetch event info for display
@@ -80,13 +86,85 @@ export default function SpotRegistrationPage({ params }: { params: Promise<{ id:
         }
     };
 
-    const downloadQR = () => {
-        const canvas = document.getElementById('qr-canvas-spot') as HTMLCanvasElement;
-        if (canvas) {
-            const pngUrl = canvas.toDataURL('image/png').replace('image/png', 'image/octet-stream');
+    // Generate entry pass with template overlay when user is registered
+    useEffect(() => {
+        if (registeredUser) {
+            generateEntryPass();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [registeredUser]);
+
+    const generateEntryPass = async () => {
+        if (!registeredUser) return;
+
+        setIsGeneratingPass(true);
+        setEntryPassDataUrl(null);
+
+        // Wait for QR code to render
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        const canvas = canvasRef.current;
+        const qrCanvas = qrRef.current?.querySelector('canvas');
+
+        if (!canvas || !qrCanvas) {
+            setIsGeneratingPass(false);
+            return;
+        }
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            setIsGeneratingPass(false);
+            return;
+        }
+
+        // Load the template image
+        const templateImg = new Image();
+        templateImg.crossOrigin = 'anonymous';
+        templateImg.src = '/entry-pass-template.jpg';
+
+        templateImg.onload = () => {
+            // Set canvas size to match template
+            canvas.width = templateImg.width;
+            canvas.height = templateImg.height;
+
+            // Draw the template
+            ctx.drawImage(templateImg, 0, 0);
+
+            // Calculate QR code position (center of the white box area)
+            const qrSize = Math.min(templateImg.width * 0.38, templateImg.height * 0.22);
+            const qrX = (templateImg.width - qrSize) / 2;
+            const qrY = templateImg.height * 0.48;
+
+            // Draw white background for QR code
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 50);
+
+            // Draw the QR code
+            ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
+
+            // Add the name below the QR code
+            ctx.fillStyle = '#000000';
+            ctx.font = `bold ${Math.floor(qrSize * 0.12)}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillText(registeredUser.name.toUpperCase(), templateImg.width / 2, qrY + qrSize + 30);
+
+            // Generate the data URL
+            const dataUrl = canvas.toDataURL('image/png');
+            setEntryPassDataUrl(dataUrl);
+            setIsGeneratingPass(false);
+        };
+
+        templateImg.onerror = () => {
+            console.error('Failed to load template image');
+            setIsGeneratingPass(false);
+        };
+    };
+
+    const downloadEntryPass = () => {
+        if (entryPassDataUrl) {
             const downloadLink = document.createElement('a');
-            downloadLink.href = pngUrl;
-            downloadLink.download = `${formData.name.replace(/\s+/g, '_')}_Spot_Ticket.png`;
+            downloadLink.href = entryPassDataUrl;
+            downloadLink.download = `${registeredUser?.name.replace(/\s+/g, '_')}_Entry_Pass.png`;
             document.body.appendChild(downloadLink);
             downloadLink.click();
             document.body.removeChild(downloadLink);
@@ -95,6 +173,7 @@ export default function SpotRegistrationPage({ params }: { params: Promise<{ id:
 
     const resetForm = () => {
         setRegisteredUser(null);
+        setEntryPassDataUrl(null);
         setFormData({ name: '', email: '', phone: '', instagram: '', youtube: '', category: '', guest_names: '', meal_preference: 'veg' });
         setError('');
     };
@@ -295,33 +374,63 @@ export default function SpotRegistrationPage({ params }: { params: Promise<{ id:
                     </>
                 ) : (
                     <div className="text-center animate-in zoom-in duration-300 mt-4">
-                        <div className="w-20 h-20 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <CheckCircle className="w-10 h-10" />
+                        <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <CheckCircle className="w-8 h-8" />
                         </div>
 
-                        <h2 className="text-2xl font-bold text-white mb-2">Registration Successful!</h2>
-                        <p className="text-muted-foreground mb-6">
+                        <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">Registration Successful!</h2>
+                        <p className="text-muted-foreground mb-4 text-sm sm:text-base">
                             <span className="text-white font-semibold">{registeredUser.name}</span> is now registered.
                         </p>
 
-                        <div className="flex flex-col items-center p-6 bg-white rounded-xl mx-auto w-fit mb-6 shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                        {/* Hidden QR code for generation */}
+                        <div ref={qrRef} className="hidden">
                             <QRCodeCanvas
-                                id="qr-canvas-spot"
                                 value={registeredUser.id}
-                                size={180}
+                                size={300}
                                 level={"H"}
-                                includeMargin={true}
+                                includeMargin={false}
                             />
-                            <p className="text-black font-bold text-lg mt-2">{registeredUser.name}</p>
+                        </div>
+
+                        {/* Hidden canvas for compositing */}
+                        <canvas ref={canvasRef} className="hidden" />
+
+                        {/* Entry Pass Preview */}
+                        <div className="flex justify-center mb-4">
+                            {isGeneratingPass ? (
+                                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                                    <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                                    <p>Generating Entry Pass...</p>
+                                </div>
+                            ) : entryPassDataUrl ? (
+                                <img
+                                    src={entryPassDataUrl}
+                                    alt="Entry Pass"
+                                    className="max-w-full h-auto rounded-lg shadow-lg border border-border"
+                                    style={{ maxHeight: '50vh' }}
+                                />
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                                    <p>Failed to generate entry pass</p>
+                                    <button
+                                        onClick={generateEntryPass}
+                                        className="mt-2 text-orange-400 hover:underline"
+                                    >
+                                        Try again
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         <div className="space-y-3">
                             <button
-                                onClick={downloadQR}
-                                className="w-full flex items-center justify-center gap-2 bg-white text-black hover:bg-gray-200 font-bold py-3.5 rounded-xl transition-colors"
+                                onClick={downloadEntryPass}
+                                disabled={!entryPassDataUrl || isGeneratingPass}
+                                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:from-gray-500 disabled:to-gray-600 text-black font-bold py-3.5 rounded-xl transition-all shadow-lg"
                             >
                                 <Download className="w-5 h-5" />
-                                Download Ticket
+                                Download Entry Pass
                             </button>
 
                             <button

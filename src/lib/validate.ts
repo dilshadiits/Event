@@ -9,15 +9,15 @@ export const createEventSchema = z.object({
 // Attendee validation
 export const createAttendeeSchema = z.object({
     name: z.string().min(1, 'Name is required').max(100, 'Name too long').trim(),
-    email: z.string().email('Invalid email format').optional().or(z.literal('')),
+    email: z.string().email('Invalid email format').optional().or(z.literal('')).nullable(),
     phone: z.string().min(10, 'Phone must be at least 10 digits').max(15, 'Phone too long').trim(),
-    instagram: z.string().max(50).optional(),
-    youtube: z.string().max(100).optional(),
-    category: z.string().max(50).optional(),
-    guest_names: z.string().max(500).optional(),
-    meal_preference: z.enum(['veg', 'non-veg']).optional(),
+    instagram: z.string().max(50).optional().nullable().transform(v => v || undefined),
+    youtube: z.string().max(100).optional().nullable().transform(v => v || undefined),
+    category: z.string().max(50).optional().nullable().transform(v => v || undefined),
+    guest_names: z.string().max(500).optional().nullable().transform(v => v || undefined),
+    meal_preference: z.enum(['veg', 'non-veg']).optional().nullable().transform(v => v || 'veg'),
     eventId: z.string().min(1, 'Event ID is required'),
-    inviteCode: z.string().optional(),
+    inviteCode: z.string().optional().nullable(),
 });
 
 // Scan validation

@@ -1,13 +1,13 @@
 'use client';
-import { useState, use } from 'react';
+import { useState, use, useEffect, useRef } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { useSearchParams } from 'next/navigation'; // Added
-import { Download, CheckCircle, UserPlus, FileText, Phone, Instagram, Youtube, Users, Tag, Utensils } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Download, CheckCircle, UserPlus, FileText, Phone, Instagram, Youtube, Users, Tag, Utensils, Loader2 } from 'lucide-react';
 
-export default function RegistrationPage({ params }: { params: Promise<{ id: string }> }) { // Kept original component name
+export default function RegistrationPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
-    const searchParams = useSearchParams(); // Added
-    const inviteCode = searchParams.get('code'); // Added
+    const searchParams = useSearchParams();
+    const inviteCode = searchParams.get('code');
 
     const [formData, setFormData] = useState({
         name: '',
@@ -24,13 +24,19 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    // Entry pass generation states
+    const [entryPassDataUrl, setEntryPassDataUrl] = useState<string | null>(null);
+    const [isGeneratingPass, setIsGeneratingPass] = useState(false);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const qrRef = useRef<HTMLDivElement>(null);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleRegister = async (e: React.FormEvent) => { // Renamed from handleSubmit to match original
+    const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.name || !formData.phone) { // Kept original validation
+        if (!formData.name || !formData.phone) {
             setError('Name and Phone are required.');
             return;
         }
@@ -41,7 +47,7 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
             const res = await fetch('/api/attendees', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...formData, eventId: id, inviteCode }), // Modified: Added inviteCode
+                body: JSON.stringify({ ...formData, eventId: id, inviteCode }),
             });
 
             const data = await res.json();
@@ -58,13 +64,85 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
         }
     };
 
-    const downloadQR = () => {
-        const canvas = document.getElementById('qr-canvas-public') as HTMLCanvasElement;
-        if (canvas) {
-            const pngUrl = canvas.toDataURL('image/png').replace('image/png', 'image/octet-stream');
+    // Generate entry pass with template overlay
+    useEffect(() => {
+        if (registeredUser) {
+            generateEntryPass();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [registeredUser]);
+
+    const generateEntryPass = async () => {
+        if (!registeredUser) return;
+
+        setIsGeneratingPass(true);
+        setEntryPassDataUrl(null);
+
+        // Wait for QR code to render
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        const canvas = canvasRef.current;
+        const qrCanvas = qrRef.current?.querySelector('canvas');
+
+        if (!canvas || !qrCanvas) {
+            setIsGeneratingPass(false);
+            return;
+        }
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            setIsGeneratingPass(false);
+            return;
+        }
+
+        // Load the template image
+        const templateImg = new Image();
+        templateImg.crossOrigin = 'anonymous';
+        templateImg.src = '/entry-pass-template.jpg';
+
+        templateImg.onload = () => {
+            // Set canvas size to match template
+            canvas.width = templateImg.width;
+            canvas.height = templateImg.height;
+
+            // Draw the template
+            ctx.drawImage(templateImg, 0, 0);
+
+            // Calculate QR code position (center of the white box area)
+            const qrSize = Math.min(templateImg.width * 0.38, templateImg.height * 0.22);
+            const qrX = (templateImg.width - qrSize) / 2;
+            const qrY = templateImg.height * 0.48;
+
+            // Draw white background for QR code
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 50);
+
+            // Draw the QR code
+            ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
+
+            // Add the name below the QR code
+            ctx.fillStyle = '#000000';
+            ctx.font = `bold ${Math.floor(qrSize * 0.12)}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillText(registeredUser.name.toUpperCase(), templateImg.width / 2, qrY + qrSize + 30);
+
+            // Generate the data URL
+            const dataUrl = canvas.toDataURL('image/png');
+            setEntryPassDataUrl(dataUrl);
+            setIsGeneratingPass(false);
+        };
+
+        templateImg.onerror = () => {
+            console.error('Failed to load template image');
+            setIsGeneratingPass(false);
+        };
+    };
+
+    const downloadEntryPass = () => {
+        if (entryPassDataUrl) {
             const downloadLink = document.createElement('a');
-            downloadLink.href = pngUrl;
-            downloadLink.download = `${formData.name.replace(/\s+/g, '_')}_Ticket.png`;
+            downloadLink.href = entryPassDataUrl;
+            downloadLink.download = `${registeredUser?.name.replace(/\s+/g, '_')}_Entry_Pass.png`;
             document.body.appendChild(downloadLink);
             downloadLink.click();
             document.body.removeChild(downloadLink);
@@ -252,37 +330,67 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
                     </>
                 ) : (
                     <div className="text-center animate-in zoom-in duration-300">
-                        <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
                             <CheckCircle className="w-8 h-8" />
                         </div>
 
-                        <h2 className="text-2xl font-bold text-white mb-2">Registration Successful!</h2>
-                        <p className="text-muted-foreground mb-8">
+                        <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">Registration Successful!</h2>
+                        <p className="text-muted-foreground mb-6 text-sm sm:text-base">
                             Hello <span className="text-white font-semibold">{registeredUser.name}</span>,<br />
                             Your spot is confirmed.
                         </p>
 
-                        <div className="flex flex-col items-center p-6 bg-white rounded-xl mx-auto w-fit mb-8 shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                        {/* Hidden QR code for generation */}
+                        <div ref={qrRef} className="hidden">
                             <QRCodeCanvas
-                                id="qr-canvas-public"
                                 value={registeredUser.id}
-                                size={200}
+                                size={300}
                                 level={"H"}
-                                includeMargin={true}
+                                includeMargin={false}
                             />
-                            <p className="text-black font-bold text-lg mt-2">{registeredUser.name}</p>
+                        </div>
+
+                        {/* Hidden canvas for compositing */}
+                        <canvas ref={canvasRef} className="hidden" />
+
+                        {/* Entry Pass Preview */}
+                        <div className="flex justify-center mb-6">
+                            {isGeneratingPass ? (
+                                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                                    <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                                    <p>Generating Entry Pass...</p>
+                                </div>
+                            ) : entryPassDataUrl ? (
+                                <img
+                                    src={entryPassDataUrl}
+                                    alt="Entry Pass"
+                                    className="max-w-full h-auto rounded-lg shadow-lg border border-border"
+                                    style={{ maxHeight: '55vh' }}
+                                />
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                                    <p>Failed to generate entry pass</p>
+                                    <button
+                                        onClick={generateEntryPass}
+                                        className="mt-2 text-blue-400 hover:underline"
+                                    >
+                                        Try again
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         <button
-                            onClick={downloadQR}
-                            className="w-full flex items-center justify-center gap-2 bg-white text-black hover:bg-gray-200 font-bold py-3.5 rounded-xl transition-colors mb-4"
+                            onClick={downloadEntryPass}
+                            disabled={!entryPassDataUrl || isGeneratingPass}
+                            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:from-gray-500 disabled:to-gray-600 text-black font-bold py-3.5 rounded-xl transition-all shadow-lg mb-4"
                         >
                             <Download className="w-5 h-5" />
-                            Download Ticket
+                            Download Entry Pass
                         </button>
 
                         <p className="text-xs text-muted-foreground">
-                            Please save this QR code and show it at the entrance.
+                            Please save this entry pass and show it at the entrance.
                         </p>
                     </div>
                 )}
