@@ -27,6 +27,7 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const [search, setSearch] = useState('');
     const [copied, setCopied] = useState(false);
+    const [inviteCopied, setInviteCopied] = useState(false);
 
 
     // Modal State
@@ -74,11 +75,11 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
             if (data.code) {
                 const url = `${window.location.origin}/register/${id}?code=${data.code}`;
                 navigator.clipboard.writeText(url);
-                alert('One-Time Link Copied to Clipboard!\n\n' + url);
+                setInviteCopied(true);
+                setTimeout(() => setInviteCopied(false), 2000);
             }
         } catch (err) {
             console.error(err);
-            alert('Failed to generate link');
         }
     };
 
@@ -137,8 +138,8 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                         onClick={generateInviteLink}
                         className="flex items-center gap-2 bg-orange-600/20 hover:bg-orange-600/40 text-orange-400 text-xs px-3 py-2 rounded-full transition-all border border-orange-500/30"
                     >
-                        <LinkIcon className="w-3 h-3" />
-                        Invite Link
+                        {inviteCopied ? <Check className="w-3 h-3" /> : <LinkIcon className="w-3 h-3" />}
+                        {inviteCopied ? 'Copied!' : 'Invite Link'}
                     </button>
                     <Link
                         href={`/spot/${id}`}

@@ -16,6 +16,7 @@ export default function AwardsPage() {
     const [loading, setLoading] = useState(true);
     const [newEventName, setNewEventName] = useState('');
     const [newEventDesc, setNewEventDesc] = useState('');
+    const [error, setError] = useState('');
 
     useEffect(() => {
         fetchEvents();
@@ -61,13 +62,14 @@ export default function AwardsPage() {
             const res = await fetch(`/api/awards?id=${id}`, { method: 'DELETE' });
             if (res.ok) {
                 fetchEvents();
+                setError('');
             } else {
                 const data = await res.json();
-                alert(`Failed to delete: ${data.error || 'Unknown error'}`);
+                setError(`Failed to delete: ${data.error || 'Unknown error'}`);
             }
         } catch (err) {
             console.error(err);
-            alert('Failed to delete award event');
+            setError('Failed to delete award event');
         }
     };
 
@@ -91,6 +93,13 @@ export default function AwardsPage() {
                     ← Back to Events
                 </Link>
             </header>
+
+            {error && (
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl flex items-center justify-between">
+                    <span>{error}</span>
+                    <button onClick={() => setError('')} className="hover:text-white">✕</button>
+                </div>
+            )}
 
             {/* Create Award Event */}
             <section className="bg-card border border-border rounded-xl p-6 shadow-xl">

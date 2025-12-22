@@ -48,7 +48,7 @@ export default function Home() {
     } catch (err) {
       console.error('Copy failed:', err);
       // Show alert as last resort
-      alert(`Copy this link: ${url}`);
+      // alert(`Copy this link: ${url}`);
     }
   };
 

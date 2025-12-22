@@ -1,5 +1,5 @@
 'use client';
-import { useState, use, useEffect, useRef } from 'react';
+import { useState, use, useEffect, useRef, useCallback } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import QRCode from 'qrcode';
 import { Download, CheckCircle, UserPlus, Phone, Users, ArrowLeft, Zap, FileText, Instagram, Youtube, Tag, Utensils, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -93,14 +93,7 @@ export default function SpotRegistrationPage({ params }: { params: Promise<{ id:
     };
 
     // Generate entry passes for main attendee and all guests
-    useEffect(() => {
-        if (registeredUser) {
-            generateAllEntryPasses();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [registeredUser]);
-
-    const generateSinglePass = (name: string, qrValue: string, isGuest: boolean, channel?: string): Promise<string> => {
+    const generateSinglePass = useCallback((name: string, qrValue: string, isGuest: boolean, channel?: string): Promise<string> => {
         return new Promise((resolve, reject) => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
@@ -167,9 +160,9 @@ export default function SpotRegistrationPage({ params }: { params: Promise<{ id:
 
             templateImg.onerror = () => reject('Failed to load template');
         });
-    };
+    }, []);
 
-    const generateAllEntryPasses = async () => {
+    const generateAllEntryPasses = useCallback(async () => {
         if (!registeredUser) return;
 
         setIsGeneratingPass(true);
@@ -202,7 +195,13 @@ export default function SpotRegistrationPage({ params }: { params: Promise<{ id:
         } finally {
             setIsGeneratingPass(false);
         }
-    };
+    }, [registeredUser, generateSinglePass]);
+
+    useEffect(() => {
+        if (registeredUser) {
+            generateAllEntryPasses();
+        }
+    }, [registeredUser, generateAllEntryPasses]);
 
     const downloadCurrentPass = () => {
         const currentPass = entryPasses[currentPassIndex];
@@ -245,13 +244,15 @@ export default function SpotRegistrationPage({ params }: { params: Promise<{ id:
                 <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-orange-500 to-yellow-500"></div>
 
                 {/* Back Link */}
-                <Link
-                    href={`/events/${id}`}
-                    className="absolute top-6 left-6 flex items-center gap-1 text-muted-foreground hover:text-white transition-colors text-sm"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    Back to Event
-                </Link>
+                <div className="mb-4 sm:mb-0">
+                    <Link
+                        href={`/events/${id}`}
+                        className="flex sm:absolute sm:top-6 sm:left-6 items-center gap-1 text-muted-foreground hover:text-white transition-colors text-sm"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        Back to Event
+                    </Link>
+                </div>
 
                 {!registeredUser ? (
                     <>

@@ -60,7 +60,7 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
     const body = await req.json();
     const { id, ...updateData } = body;
 
-    console.log('[Awards PUT] Request body:', { id, updateData });
+    // console.log('[Awards PUT] Request body:', { id, updateData });
 
     if (!id || !isValidObjectId(id)) {
         return errorResponse('Valid event ID is required', 400);
@@ -82,17 +82,7 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
     if (updateData.sponsorImages !== undefined) event.sponsorImages = updateData.sponsorImages;
     if (updateData.isActive !== undefined) event.isActive = updateData.isActive;
 
-    console.log('[Awards PUT] Event before save:', {
-        headerImage: event.headerImage,
-        sponsorImages: event.sponsorImages
-    });
-
     await event.save();
-
-    console.log('[Awards PUT] Event after save:', {
-        headerImage: event.headerImage,
-        sponsorImages: event.sponsorImages
-    });
 
     return successResponse({
         id: event._id.toString(),

@@ -172,19 +172,36 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
                 <p className="text-sm sm:text-base text-muted-foreground">{eventData?.description || 'Vote for your favorites in each category'}</p>
 
                 {/* Sponsors */}
+                {/* Sponsors */}
                 {eventData?.sponsorImages && eventData.sponsorImages.length > 0 && (
-                    <div className="mt-6 pt-4 border-t border-border/50">
-                        <p className="text-xs text-muted-foreground mb-3">Sponsored by</p>
-                        <div className="flex flex-wrap justify-center gap-4">
-                            {eventData.sponsorImages.map((url, i) => (
-                                <img
-                                    key={i}
-                                    src={url}
-                                    alt={`Sponsor ${i + 1}`}
-                                    className="h-10 md:h-12 w-auto object-contain bg-white/10 rounded-lg px-3 py-1"
-                                />
-                            ))}
+                    <div className="mt-6 pt-4 border-t border-border/50 space-y-6">
+
+                        {/* Main Sponsor */}
+                        <div className="flex flex-col items-center gap-2">
+                            <span className="text-[10px] sm:text-xs uppercase tracking-widest text-yellow-500 font-semibold">Main Sponsor</span>
+                            <img
+                                src={eventData.sponsorImages[0]}
+                                alt="Main Sponsor"
+                                className="h-16 sm:h-20 md:h-24 w-auto object-contain bg-white/10 rounded-lg px-4 py-2 border border-yellow-500/30"
+                            />
                         </div>
+
+                        {/* Associate Sponsors */}
+                        {eventData.sponsorImages.length > 1 && (
+                            <div className="flex flex-col items-center gap-2 sm:gap-3">
+                                <span className="text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground font-medium">Associate Sponsors</span>
+                                <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+                                    {eventData.sponsorImages.slice(1).map((url, i) => (
+                                        <img
+                                            key={i}
+                                            src={url}
+                                            alt={`Associate Sponsor ${i + 1}`}
+                                            className="h-14 sm:h-16 md:h-20 w-auto object-contain bg-white/10 rounded-lg px-3 sm:px-4 py-2 border border-white/10"
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </header>

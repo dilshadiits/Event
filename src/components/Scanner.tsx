@@ -49,7 +49,7 @@ export default function Scanner({ onScan, paused }: ScannerProps) {
                         }
                     );
                 } else {
-                    alert("No cameras found.");
+                    console.error("No cameras found.");
                 }
             } catch (err) {
                 console.error("Camera error", err);
