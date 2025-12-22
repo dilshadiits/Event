@@ -130,7 +130,8 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
     };
 
     const getNomineesForCategory = (categoryId: string) => {
-        return nominees.filter(n => n.categoryId === categoryId || n.categoryId === null);
+        // Only show nominees that are assigned to this specific category
+        return nominees.filter(n => n.categoryId === categoryId);
     };
 
     const getRankIcon = (index: number) => {
