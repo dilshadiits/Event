@@ -21,13 +21,35 @@ export default function Home() {
     fetchEvents();
   }, []);
 
-  const copyLink = (e: React.MouseEvent, id: string) => {
+  const copyLink = async (e: React.MouseEvent, id: string) => {
     e.preventDefault(); // Prevent navigation
     e.stopPropagation();
     const url = `${window.location.origin}/register/${id}`;
-    navigator.clipboard.writeText(url);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+
+    try {
+      // Try modern clipboard API first
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        // Fallback for iOS Safari and older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error('Copy failed:', err);
+      // Show alert as last resort
+      alert(`Copy this link: ${url}`);
+    }
   };
 
   const deleteEvent = async (e: React.MouseEvent, id: string) => {

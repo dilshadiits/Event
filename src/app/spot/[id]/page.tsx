@@ -79,9 +79,9 @@ export default function SpotRegistrationPage({ params }: { params: Promise<{ id:
                 // Only take the first guest name if multiple are entered
                 const singleGuest = formData.guest_names.split(',')[0]?.trim() || '';
                 setRegisteredUser({ ...data, guest_names: singleGuest, channel: channelName });
-                // Play success sound
-                const audio = new Audio('/beep.mp3');
-                audio.play().catch(() => { });
+                // Play success sound (TODO: Restore when beep.mp3 is added)
+                // const audio = new Audio('/beep.mp3');
+                // audio.play().catch(() => { });
             } else {
                 setError(data.error || 'Registration failed');
             }
@@ -520,9 +520,9 @@ export default function SpotRegistrationPage({ params }: { params: Promise<{ id:
                                     {/* Pass indicator dots */}
                                     {entryPasses.length > 1 && (
                                         <div className="flex justify-center gap-2 mt-3">
-                                            {entryPasses.map((_, index) => (
+                                            {entryPasses.map((pass, index) => (
                                                 <button
-                                                    key={index}
+                                                    key={`${pass.name}-${index}`}
                                                     onClick={() => setCurrentPassIndex(index)}
                                                     className={`w-2.5 h-2.5 rounded-full transition-all ${index === currentPassIndex
                                                         ? 'bg-orange-500 scale-110'
