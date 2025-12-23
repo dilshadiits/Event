@@ -70,6 +70,7 @@ const AwardEventSchema = new mongoose.Schema({
     description: { type: String },
     headerImage: { type: String }, // Event banner/header image URL
     sponsorImages: [{ type: String }], // Array of sponsor logo URLs
+    digitalMediaSponsorIndex: { type: Number, default: -1 }, // Index of sponsor to show as Digital Media Sponsor (-1 = none)
     isActive: { type: Boolean, default: true },
     createdAt: { type: Date, default: Date.now },
 });

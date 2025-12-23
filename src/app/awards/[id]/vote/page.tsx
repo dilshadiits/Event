@@ -26,6 +26,7 @@ interface AwardEventData {
     description: string;
     headerImage: string;
     sponsorImages: string[];
+    digitalMediaSponsorIndex: number;
 }
 
 interface VoteResult {
@@ -177,14 +178,30 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
                 {eventData?.sponsorImages && eventData.sponsorImages.length > 0 && (
                     <div className="mt-6 pt-4 border-t border-border/50 space-y-6">
 
-                        {/* Main Sponsor */}
-                        <div className="flex flex-col items-center gap-2">
-                            <span className="text-[10px] sm:text-xs uppercase tracking-widest text-yellow-500 font-semibold">Main Sponsor</span>
-                            <img
-                                src={eventData.sponsorImages[0]}
-                                alt="Main Sponsor"
-                                className="h-16 sm:h-20 md:h-24 w-auto object-contain bg-white/10 rounded-lg px-4 py-2 border border-yellow-500/30"
-                            />
+                        {/* Main Sponsor & Digital Media Sponsor Row */}
+                        <div className="flex flex-wrap justify-center items-start gap-6 sm:gap-10">
+                            {/* Main Sponsor */}
+                            <div className="flex flex-col items-center gap-2">
+                                <span className="text-[10px] sm:text-xs uppercase tracking-widest text-yellow-500 font-semibold">Main Sponsor</span>
+                                <img
+                                    src={eventData.sponsorImages[0]}
+                                    alt="Main Sponsor"
+                                    className="h-16 sm:h-20 md:h-24 w-auto object-contain bg-white/10 rounded-lg px-4 py-2 border border-yellow-500/30"
+                                />
+                            </div>
+
+                            {/* Digital Media Sponsor */}
+                            {eventData.digitalMediaSponsorIndex >= 0 &&
+                                eventData.digitalMediaSponsorIndex < eventData.sponsorImages.length && (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <span className="text-[10px] sm:text-xs uppercase tracking-widest text-cyan-400 font-semibold">Digital Media Sponsor</span>
+                                        <img
+                                            src={eventData.sponsorImages[eventData.digitalMediaSponsorIndex]}
+                                            alt="Digital Media Sponsor"
+                                            className="h-16 sm:h-20 md:h-24 w-auto object-contain bg-white/10 rounded-lg px-4 py-2 border border-cyan-500/30"
+                                        />
+                                    </div>
+                                )}
                         </div>
 
                         {/* Associate Sponsors */}
@@ -192,7 +209,10 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
                             <div className="flex flex-col items-center gap-2 sm:gap-3">
                                 <span className="text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground font-medium">Associate Sponsors</span>
                                 <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
-                                    {eventData.sponsorImages.slice(1).map((url, i) => (
+                                    {eventData.sponsorImages.slice(1).filter((_, i) =>
+                                        // Don't show digital media sponsor in associate sponsors if it's already shown above
+                                        eventData.digitalMediaSponsorIndex !== i + 1
+                                    ).map((url, i) => (
                                         <img
                                             key={i}
                                             src={url}

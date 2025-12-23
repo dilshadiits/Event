@@ -64,6 +64,7 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
     const [headerImage, setHeaderImage] = useState('');
     const [newSponsorImage, setNewSponsorImage] = useState('');
     const [sponsorImages, setSponsorImages] = useState<string[]>([]);
+    const [digitalMediaSponsorIndex, setDigitalMediaSponsorIndex] = useState(-1);
     const [savingSettings, setSavingSettings] = useState(false);
 
     const [copied, setCopied] = useState(false);
@@ -90,6 +91,7 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
             if (eventDataRes && !eventDataRes.error) {
                 setHeaderImage(eventDataRes.headerImage || '');
                 setSponsorImages(eventDataRes.sponsorImages || []);
+                setDigitalMediaSponsorIndex(eventDataRes.digitalMediaSponsorIndex ?? -1);
             }
         } catch (err) {
             console.error(err);
@@ -283,7 +285,8 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     headerImage,
-                    sponsorImages
+                    sponsorImages,
+                    digitalMediaSponsorIndex
                 })
             });
             fetchData();
@@ -303,6 +306,12 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
 
     const removeSponsorImage = (index: number) => {
         setSponsorImages(sponsorImages.filter((_, i) => i !== index));
+        // Adjust digitalMediaSponsorIndex if needed
+        if (index === digitalMediaSponsorIndex) {
+            setDigitalMediaSponsorIndex(-1); // Reset if removed sponsor was the digital media sponsor
+        } else if (index < digitalMediaSponsorIndex) {
+            setDigitalMediaSponsorIndex(digitalMediaSponsorIndex - 1); // Adjust index
+        }
     };
 
     if (loading) {
@@ -413,6 +422,38 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                             </div>
                         )}
                     </div>
+
+                    {/* Digital Media Sponsor Selector */}
+                    {sponsorImages.length > 0 && (
+                        <div className="space-y-2 md:col-span-2">
+                            <label className="text-sm text-muted-foreground flex items-center gap-2">
+                                <ImageIcon className="w-4 h-4" />
+                                Digital Media Sponsor (displays next to Main Sponsor)
+                            </label>
+                            <select
+                                value={digitalMediaSponsorIndex}
+                                onChange={(e) => setDigitalMediaSponsorIndex(parseInt(e.target.value))}
+                                className="w-full md:w-auto bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                            >
+                                <option value={-1}>None Selected</option>
+                                {sponsorImages.map((url, i) => (
+                                    <option key={i} value={i}>
+                                        Sponsor {i + 1} {i === 0 ? '(Main Sponsor)' : ''}
+                                    </option>
+                                ))}
+                            </select>
+                            {digitalMediaSponsorIndex >= 0 && digitalMediaSponsorIndex < sponsorImages.length && (
+                                <div className="flex items-center gap-2 text-xs text-cyan-400">
+                                    <img
+                                        src={sponsorImages[digitalMediaSponsorIndex]}
+                                        alt="Digital Media Sponsor Preview"
+                                        className="w-10 h-10 object-contain rounded border border-cyan-500/30 bg-white/10"
+                                    />
+                                    <span>Selected as Digital Media Sponsor</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 <button

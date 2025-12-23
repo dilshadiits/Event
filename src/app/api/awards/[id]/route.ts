@@ -29,6 +29,7 @@ export async function GET(
             description: event.description || '',
             headerImage: event.headerImage || '',
             sponsorImages: event.sponsorImages || [],
+            digitalMediaSponsorIndex: event.digitalMediaSponsorIndex ?? -1,
             isActive: event.isActive,
             createdAt: event.createdAt,
         });
@@ -65,6 +66,7 @@ export async function PUT(
         if (body.description !== undefined) event.description = body.description;
         if (body.headerImage !== undefined) event.headerImage = body.headerImage;
         if (body.sponsorImages !== undefined) event.sponsorImages = body.sponsorImages;
+        if (body.digitalMediaSponsorIndex !== undefined) event.digitalMediaSponsorIndex = body.digitalMediaSponsorIndex;
         if (body.isActive !== undefined) event.isActive = body.isActive;
 
         await event.save();
@@ -75,6 +77,7 @@ export async function PUT(
             description: event.description || '',
             headerImage: event.headerImage || '',
             sponsorImages: event.sponsorImages || [],
+            digitalMediaSponsorIndex: event.digitalMediaSponsorIndex ?? -1,
             isActive: event.isActive,
             createdAt: event.createdAt,
         });

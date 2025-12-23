@@ -10,6 +10,7 @@ const createAwardEventSchema = z.object({
     description: z.string().max(500).optional(),
     headerImage: z.string().max(1000).optional(),
     sponsorImages: z.array(z.string().max(1000)).max(10).optional(),
+    digitalMediaSponsorIndex: z.number().int().min(-1).max(9).optional(),
 });
 
 // GET /api/awards - Get all award events
@@ -26,6 +27,7 @@ export const GET = withErrorHandler(async () => {
         description: e.description || '',
         headerImage: e.headerImage || '',
         sponsorImages: e.sponsorImages || [],
+        digitalMediaSponsorIndex: e.digitalMediaSponsorIndex ?? -1,
         isActive: e.isActive,
         createdAt: e.createdAt,
     })));
@@ -43,6 +45,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         description: validated.description || '',
         headerImage: validated.headerImage || '',
         sponsorImages: validated.sponsorImages || [],
+        digitalMediaSponsorIndex: validated.digitalMediaSponsorIndex ?? -1,
     });
 
     return successResponse({
@@ -51,6 +54,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         description: event.description,
         headerImage: event.headerImage,
         sponsorImages: event.sponsorImages,
+        digitalMediaSponsorIndex: event.digitalMediaSponsorIndex ?? -1,
         isActive: event.isActive,
     }, 201);
 });
@@ -80,6 +84,7 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
     if (updateData.description !== undefined) event.description = updateData.description;
     if (updateData.headerImage !== undefined) event.headerImage = updateData.headerImage;
     if (updateData.sponsorImages !== undefined) event.sponsorImages = updateData.sponsorImages;
+    if (updateData.digitalMediaSponsorIndex !== undefined) event.digitalMediaSponsorIndex = updateData.digitalMediaSponsorIndex;
     if (updateData.isActive !== undefined) event.isActive = updateData.isActive;
 
     await event.save();
@@ -90,6 +95,7 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
         description: event.description || '',
         headerImage: event.headerImage || '',
         sponsorImages: event.sponsorImages || [],
+        digitalMediaSponsorIndex: event.digitalMediaSponsorIndex ?? -1,
         isActive: event.isActive ?? true,
     });
 });
