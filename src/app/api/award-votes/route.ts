@@ -93,14 +93,22 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         return errorResponse('Nominee not found', 404);
     }
 
-    // Check if user already voted in this EVENT (only ONE vote per phone per event)
-    const existingVote = await Vote.findOne({
-        eventId: validated.awardEventId,
-        voterPhone: validated.voterPhone
-    });
+    // Admin phone number can vote unlimited times (bypass duplicate check)
+    const ADMIN_PHONE = process.env.ADMIN_PHONE || '7736909993';
+    const ADMIN_NAME = process.env.ADMIN_NAME || 'admin';
+    const isAdminVoter = validated.voterPhone === ADMIN_PHONE || validated.voterName.toLowerCase() === ADMIN_NAME.toLowerCase();
 
-    if (existingVote) {
-        return errorResponse('You have already voted. Only one vote per phone number is allowed.', 409);
+    // Check if user already voted in this CATEGORY (one vote per phone per category)
+    // Skip this check for admin phone
+    if (!isAdminVoter) {
+        const existingVote = await Vote.findOne({
+            categoryId: validated.categoryId,
+            voterPhone: validated.voterPhone
+        });
+
+        if (existingVote) {
+            return errorResponse('You have already voted in this category.', 409);
+        }
     }
 
     // Create the vote

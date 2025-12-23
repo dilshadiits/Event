@@ -47,7 +47,7 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
     const [phone, setPhone] = useState('');
     const [voterName, setVoterName] = useState('');
     const [phoneSubmitted, setPhoneSubmitted] = useState(false);
-    const [hasVoted, setHasVoted] = useState(false); // Track if user already voted
+    const [votedCategories, setVotedCategories] = useState<Set<string>>(new Set()); // Track voted categories
     const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0); // Current category being voted on
     const [votingComplete, setVotingComplete] = useState(false); // All categories done
     const [eventData, setEventData] = useState<AwardEventData | null>(null);
@@ -123,7 +123,7 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
 
             if (res.ok) {
                 setSuccess('Vote submitted!');
-                setHasVoted(true); // Mark as voted
+                setVotedCategories(prev => new Set([...prev, categoryId])); // Track voted category
                 // Auto-advance to next category or complete
                 setTimeout(() => {
                     goToNextCategory();
@@ -310,15 +310,16 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
                             <Award className="w-12 h-12 mx-auto mb-4 opacity-50" />
                             No voting categories available yet.
                         </div>
-                    ) : votingComplete || hasVoted ? (
+                    ) : votingComplete ? (
                         /* Voting complete - show thank you message */
                         <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-8 text-center">
                             <Check className="w-16 h-16 text-green-400 mx-auto mb-4" />
                             <h3 className="text-xl font-bold text-green-400 mb-2">Thank You for Voting!</h3>
                             <p className="text-muted-foreground mb-4">
-                                {hasVoted
-                                    ? 'Your vote has been recorded. Each phone number can only vote once.'
-                                    : 'You have completed all voting categories.'}
+                                You have completed all voting categories. Your votes have been recorded.
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                                You voted in {votedCategories.size} of {categories.length} categories.
                             </p>
                         </div>
                     ) : (

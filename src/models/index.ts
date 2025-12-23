@@ -59,8 +59,8 @@ const VoteSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
 });
 
-// Compound index to enforce one vote per phone per EVENT (only one vote total)
-VoteSchema.index({ eventId: 1, voterPhone: 1 }, { unique: true });
+// Compound index to enforce one vote per phone per CATEGORY
+VoteSchema.index({ categoryId: 1, voterPhone: 1 }, { unique: true });
 
 export const AwardCategory = mongoose.models.AwardCategory || mongoose.model('AwardCategory', AwardCategorySchema);
 export const Vote = mongoose.models.Vote || mongoose.model('Vote', VoteSchema);
