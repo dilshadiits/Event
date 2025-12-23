@@ -59,8 +59,8 @@ const VoteSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
 });
 
-// Compound index to enforce one vote per phone per CATEGORY
-VoteSchema.index({ categoryId: 1, voterPhone: 1 }, { unique: true });
+// Compound index for efficient lookups (not unique to allow admin unlimited voting)
+VoteSchema.index({ categoryId: 1, voterPhone: 1 });
 
 export const AwardCategory = mongoose.models.AwardCategory || mongoose.model('AwardCategory', AwardCategorySchema);
 export const Vote = mongoose.models.Vote || mongoose.model('Vote', VoteSchema);

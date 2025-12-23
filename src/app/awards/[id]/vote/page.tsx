@@ -127,7 +127,7 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
                 // Auto-advance to next category or complete
                 setTimeout(() => {
                     goToNextCategory();
-                }, 1000);
+                }, 500);
             } else {
                 setError(data.error || 'Failed to submit vote');
             }
@@ -344,7 +344,12 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
 
                             {/* Current Category */}
                             {(() => {
+                                // Safety check to prevent crash
+                                if (currentCategoryIndex >= categories.length) {
+                                    return null;
+                                }
                                 const category = categories[currentCategoryIndex];
+                                if (!category) return null;
                                 const categoryNominees = getNomineesForCategory(category.id);
                                 const result = results.find(r => r.categoryId === category.id);
 
