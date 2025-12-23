@@ -93,17 +93,21 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         return errorResponse('Nominee not found', 404);
     }
 
-    // Admin phone number can vote unlimited times (bypass duplicate check)
-    const ADMIN_PHONE = process.env.ADMIN_PHONE || '7736909993';
-    const ADMIN_NAME = process.env.ADMIN_NAME || 'admin';
-    const isAdminVoter = validated.voterPhone === ADMIN_PHONE || validated.voterName.toLowerCase() === ADMIN_NAME.toLowerCase();
+    // Normalize phone number (remove non-digits, take last 10 digits)
+    const normalizedPhone = validated.voterPhone.replace(/\D/g, '').slice(-10);
 
-    // Check if user already voted in this CATEGORY (one vote per phone per category)
+    // Admin phone number can vote unlimited times (bypass duplicate check)
+    const ADMIN_PHONE = (process.env.ADMIN_PHONE || '7736909993').replace(/\D/g, '').slice(-10);
+    const ADMIN_NAME = process.env.ADMIN_NAME || 'admin';
+    const isAdminVoter = normalizedPhone === ADMIN_PHONE || validated.voterName.toLowerCase() === ADMIN_NAME.toLowerCase();
+
+    // Check if user already voted in this CATEGORY for this EVENT (one vote per phone per category)
     // Skip this check for admin phone
     if (!isAdminVoter) {
         const existingVote = await Vote.findOne({
+            eventId: validated.awardEventId,
             categoryId: validated.categoryId,
-            voterPhone: validated.voterPhone
+            voterPhone: normalizedPhone
         });
 
         if (existingVote) {
@@ -111,12 +115,12 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         }
     }
 
-    // Create the vote
+    // Create the vote (store normalized phone for consistent checking)
     const vote = await Vote.create({
         categoryId: validated.categoryId,
         eventId: validated.awardEventId, // Using eventId field for awardEventId
         nomineeId: validated.nomineeId,
-        voterPhone: validated.voterPhone,
+        voterPhone: normalizedPhone, // Store normalized phone
         voterName: validated.voterName,
     });
 

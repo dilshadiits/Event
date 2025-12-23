@@ -1,5 +1,5 @@
 'use client';
-import { useState, useSyncExternalStore, memo, ReactNode, useEffect } from 'react';
+import { useState, useSyncExternalStore, memo, ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 
@@ -17,8 +17,10 @@ const PUBLIC_ROUTES = [
 
 // Check if current path is a public route
 const isPublicRoute = (pathname: string): boolean => {
-    // Check for voting page specifically
+    // Check for voting page specifically - check various patterns
     if (pathname.includes('/vote')) return true;
+    // Check for awards pages with IDs (public voting links)
+    if (pathname.startsWith('/awards/') && pathname.length > 8) return true;
     // Check for other public routes
     return PUBLIC_ROUTES.some(route => pathname.startsWith(route));
 };
@@ -46,12 +48,10 @@ AuthenticatedContent.displayName = 'AuthenticatedContent';
 
 export default function PasswordGate({ children }: PasswordGateProps) {
     const pathname = usePathname();
-    const [isPublic, setIsPublic] = useState(false);
 
-    // Check if current route is public
-    useEffect(() => {
-        setIsPublic(isPublicRoute(pathname));
-    }, [pathname]);
+    // Check public route synchronously during render, not in useEffect
+    // This prevents the password gate from flashing on public routes
+    const isPublic = isPublicRoute(pathname);
 
     // Use useSyncExternalStore for synchronous localStorage access
     const authToken = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);

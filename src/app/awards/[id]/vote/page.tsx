@@ -18,6 +18,7 @@ interface Nominee {
     imageUrl: string;
     categoryId: string | null;
     categoryName: string;
+    position?: number;
 }
 
 interface AwardEventData {
@@ -75,7 +76,11 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
 
             if (eventDataRes && !eventDataRes.error) setEventData(eventDataRes);
             if (Array.isArray(catData)) setCategories(catData.filter((c: Category) => c.isActive));
-            if (Array.isArray(nomData)) setNominees(nomData);
+            if (Array.isArray(nomData)) {
+                // Sort nominees by position to ensure stable order
+                const sortedNominees = [...nomData].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+                setNominees(sortedNominees);
+            }
             if (Array.isArray(resultData)) setResults(resultData);
         } catch (err) {
             console.error(err);
@@ -157,7 +162,10 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
 
     const getNomineesForCategory = (categoryId: string) => {
         // Only show nominees that are assigned to this specific category
-        return nominees.filter(n => n.categoryId === categoryId);
+        // Sort by position to maintain consistent ordering
+        return nominees
+            .filter(n => n.categoryId === categoryId)
+            .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
     };
 
     const getRankIcon = (index: number) => {
