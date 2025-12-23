@@ -11,6 +11,7 @@ const createNomineeSchema = z.object({
     name: z.string().min(1).max(100).trim(),
     description: z.string().max(500).optional(),
     imageUrl: z.string().max(500).optional(),
+    position: z.number().int().min(0).optional(),
 });
 
 const updateNomineeSchema = z.object({
@@ -19,6 +20,14 @@ const updateNomineeSchema = z.object({
     description: z.string().max(500).optional(),
     imageUrl: z.string().max(500).optional(),
     categoryId: z.string().optional().nullable(),
+    position: z.number().int().min(0).optional(),
+});
+
+const updatePositionsSchema = z.object({
+    positions: z.array(z.object({
+        id: z.string().min(1),
+        position: z.number().int().min(0),
+    })),
 });
 
 // GET /api/nominees?awardEventId=xxx&categoryId=xxx
@@ -37,7 +46,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
         filter.categoryId = categoryId;
     }
 
-    const nominees = await Nominee.find(filter).sort({ createdAt: -1 }).lean();
+    const nominees = await Nominee.find(filter).sort({ categoryId: 1, position: 1, createdAt: -1 }).lean();
 
     // Get category names
     const categoryIds = [...new Set(nominees.map(n => n.categoryId?.toString()).filter(Boolean))];
@@ -52,6 +61,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
         name: n.name,
         description: n.description || '',
         imageUrl: n.imageUrl || '',
+        position: n.position ?? 0,
         createdAt: n.createdAt,
     })));
 });
@@ -67,12 +77,20 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
     await connectDB();
 
+    // Get max position for the category to auto-assign position
+    const maxPosNominee = await Nominee.findOne({
+        awardEventId: validated.awardEventId,
+        categoryId: validated.categoryId || null
+    }).sort({ position: -1 }).lean();
+    const nextPosition = validated.position ?? ((maxPosNominee?.position ?? -1) + 1);
+
     const nominee = await Nominee.create({
         awardEventId: validated.awardEventId,
         categoryId: validated.categoryId || null,
         name: validated.name,
         description: validated.description || '',
         imageUrl: validated.imageUrl || '',
+        position: nextPosition,
     });
 
     return successResponse({
@@ -102,6 +120,7 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
     if (validated.description !== undefined) updateData.description = validated.description;
     if (validated.imageUrl !== undefined) updateData.imageUrl = validated.imageUrl;
     if (validated.categoryId !== undefined) updateData.categoryId = validated.categoryId || null;
+    if (validated.position !== undefined) updateData.position = validated.position;
 
     const nominee = await Nominee.findByIdAndUpdate(
         validated.id,
@@ -119,6 +138,7 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
         description: nominee.description || '',
         imageUrl: nominee.imageUrl || '',
         categoryId: nominee.categoryId?.toString() || null,
+        position: nominee.position ?? 0,
     });
 });
 
@@ -139,4 +159,21 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
     }
 
     return successResponse({ success: true });
+});
+
+// PATCH /api/nominees - Bulk update positions
+export const PATCH = withErrorHandler(async (req: NextRequest) => {
+    const body = await req.json();
+    const validated = updatePositionsSchema.parse(body);
+
+    await connectDB();
+
+    // Update all positions in parallel
+    await Promise.all(
+        validated.positions.map(({ id, position }) =>
+            Nominee.findByIdAndUpdate(id, { position })
+        )
+    );
+
+    return successResponse({ success: true, updated: validated.positions.length });
 });

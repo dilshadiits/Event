@@ -2,7 +2,7 @@
 'use client';
 import { useState, useEffect, use, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Plus, Trophy, Award, Trash2, Eye, EyeOff, Users, Vote, Link as LinkIcon, Check, Loader2, Image as ImageIcon, Settings, Crown, Medal, BarChart3, Radio, Edit2, X } from 'lucide-react';
+import { ArrowLeft, Plus, Trophy, Award, Trash2, Eye, EyeOff, Users, Vote, Link as LinkIcon, Check, Loader2, Image as ImageIcon, Settings, Crown, Medal, BarChart3, Radio, Edit2, X, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface Category {
     id: string;
@@ -19,6 +19,7 @@ interface Nominee {
     imageUrl: string;
     categoryId: string | null;
     categoryName: string;
+    position: number;
 }
 
 interface VoteResult {
@@ -274,6 +275,57 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
         } finally {
             setSavingNominee(false);
         }
+    };
+
+    // Move nominee up or down within category
+    const moveNominee = async (nominee: Nominee, direction: 'up' | 'down') => {
+        const categoryNominees = nominees
+            .filter(n => n.categoryId === nominee.categoryId)
+            .sort((a, b) => a.position - b.position);
+
+        const currentIndex = categoryNominees.findIndex(n => n.id === nominee.id);
+        const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+        if (swapIndex < 0 || swapIndex >= categoryNominees.length) return;
+
+        const swapNominee = categoryNominees[swapIndex];
+
+        try {
+            await fetch('/api/nominees', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    positions: [
+                        { id: nominee.id, position: swapNominee.position },
+                        { id: swapNominee.id, position: nominee.position }
+                    ]
+                })
+            });
+            fetchData();
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    // Group nominees by category
+    const getNomineesByCategory = () => {
+        const grouped: { [key: string]: { categoryName: string; nominees: Nominee[] } } = {};
+
+        // First add "All Categories" group
+        const uncategorized = nominees.filter(n => !n.categoryId);
+        if (uncategorized.length > 0) {
+            grouped['uncategorized'] = { categoryName: 'All Categories', nominees: uncategorized.sort((a, b) => a.position - b.position) };
+        }
+
+        // Then add each category
+        categories.forEach(cat => {
+            const catNominees = nominees.filter(n => n.categoryId === cat.id);
+            if (catNominees.length > 0) {
+                grouped[cat.id] = { categoryName: cat.name, nominees: catNominees.sort((a, b) => a.position - b.position) };
+            }
+        });
+
+        return grouped;
     };
 
     // Event settings
@@ -594,36 +646,78 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                         </div>
                     </form>
 
-                    {/* Nominees List */}
+                    {/* Nominees List - Grouped by Category */}
                     {nominees.length === 0 ? (
                         <div className="p-6 text-center text-muted-foreground text-sm">
                             No nominees yet. Add one above.
                         </div>
                     ) : (
-                        <div className="divide-y divide-border/50 max-h-[400px] overflow-y-auto">
-                            {nominees.map((nominee) => (
-                                <div key={nominee.id} className="p-4 flex items-center gap-3 hover:bg-muted/30">
-                                    <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400 font-bold">
-                                        {nominee.name.charAt(0).toUpperCase()}
+                        <div className="max-h-[500px] overflow-y-auto">
+                            {Object.entries(getNomineesByCategory()).map(([categoryId, { categoryName, nominees: catNominees }]) => (
+                                <div key={categoryId} className="border-b border-border/50 last:border-b-0">
+                                    {/* Category Header */}
+                                    <div className="px-4 py-2 bg-muted/30 border-b border-border/30">
+                                        <span className="text-xs font-medium text-yellow-400 uppercase tracking-wider">
+                                            {categoryName} ({catNominees.length})
+                                        </span>
                                     </div>
-                                    <div className="flex-1">
-                                        <span className="font-medium text-white">{nominee.name}</span>
-                                        <p className="text-xs text-muted-foreground">{nominee.categoryName}</p>
+                                    {/* Nominees in Category */}
+                                    <div className="divide-y divide-border/30">
+                                        {catNominees.map((nominee, index) => (
+                                            <div key={nominee.id} className="p-3 flex items-center gap-3 hover:bg-muted/30">
+                                                {/* Position Controls */}
+                                                <div className="flex flex-col gap-0.5">
+                                                    <button
+                                                        onClick={() => moveNominee(nominee, 'up')}
+                                                        disabled={index === 0}
+                                                        className="p-0.5 text-muted-foreground hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                                                        title="Move up"
+                                                    >
+                                                        <ChevronUp className="w-3 h-3" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => moveNominee(nominee, 'down')}
+                                                        disabled={index === catNominees.length - 1}
+                                                        className="p-0.5 text-muted-foreground hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                                                        title="Move down"
+                                                    >
+                                                        <ChevronDown className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                                {/* Position Badge */}
+                                                <span className="w-6 h-6 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400 text-xs font-bold">
+                                                    {index + 1}
+                                                </span>
+                                                {/* Nominee Avatar */}
+                                                {nominee.imageUrl ? (
+                                                    <img src={nominee.imageUrl} alt={nominee.name} className="w-8 h-8 rounded-full object-cover border border-border" />
+                                                ) : (
+                                                    <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400 font-bold text-sm">
+                                                        {nominee.name.charAt(0).toUpperCase()}
+                                                    </div>
+                                                )}
+                                                {/* Nominee Info */}
+                                                <div className="flex-1 min-w-0">
+                                                    <span className="font-medium text-white text-sm truncate block">{nominee.name}</span>
+                                                </div>
+                                                {/* Actions */}
+                                                <button
+                                                    onClick={() => openEditNominee(nominee)}
+                                                    className="p-1.5 text-muted-foreground hover:text-blue-400 hover:bg-blue-500/10 rounded"
+                                                    title="Edit nominee"
+                                                >
+                                                    <Edit2 className="w-3 h-3" />
+                                                </button>
+                                                <button
+                                                    onClick={() => deleteNominee(nominee.id)}
+                                                    className="p-1.5 text-muted-foreground hover:text-red-400 hover:bg-red-500/10 rounded"
+                                                    title="Delete nominee"
+                                                >
+                                                    <Trash2 className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        ))}
                                     </div>
-                                    <button
-                                        onClick={() => openEditNominee(nominee)}
-                                        className="p-1.5 text-muted-foreground hover:text-blue-400 hover:bg-blue-500/10 rounded"
-                                        title="Edit nominee"
-                                    >
-                                        <Edit2 className="w-3 h-3" />
-                                    </button>
-                                    <button
-                                        onClick={() => deleteNominee(nominee.id)}
-                                        className="p-1.5 text-muted-foreground hover:text-red-400 hover:bg-red-500/10 rounded"
-                                        title="Delete nominee"
-                                    >
-                                        <Trash2 className="w-3 h-3" />
-                                    </button>
                                 </div>
                             ))}
                         </div>

@@ -10,6 +10,7 @@ const submitAwardVoteSchema = z.object({
     categoryId: z.string().min(1),
     nomineeId: z.string().min(1),
     voterPhone: z.string().min(10).max(15).trim(),
+    voterName: z.string().min(1).max(100).trim(),
 });
 
 // GET /api/award-votes?awardEventId=xxx - Get vote results for standalone award event
@@ -92,14 +93,14 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         return errorResponse('Nominee not found', 404);
     }
 
-    // Check if user already voted in this category
+    // Check if user already voted in this EVENT (only ONE vote per phone per event)
     const existingVote = await Vote.findOne({
-        categoryId: validated.categoryId,
+        eventId: validated.awardEventId,
         voterPhone: validated.voterPhone
     });
 
     if (existingVote) {
-        return errorResponse('You have already voted in this category', 409);
+        return errorResponse('You have already voted. Only one vote per phone number is allowed.', 409);
     }
 
     // Create the vote
@@ -108,6 +109,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         eventId: validated.awardEventId, // Using eventId field for awardEventId
         nomineeId: validated.nomineeId,
         voterPhone: validated.voterPhone,
+        voterName: validated.voterName,
     });
 
     return successResponse({

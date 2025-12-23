@@ -45,12 +45,15 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
     const { id } = use(params);
 
     const [phone, setPhone] = useState('');
+    const [voterName, setVoterName] = useState('');
     const [phoneSubmitted, setPhoneSubmitted] = useState(false);
+    const [hasVoted, setHasVoted] = useState(false); // Track if user already voted
+    const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0); // Current category being voted on
+    const [votingComplete, setVotingComplete] = useState(false); // All categories done
     const [eventData, setEventData] = useState<AwardEventData | null>(null);
     const [categories, setCategories] = useState<Category[]>([]);
     const [nominees, setNominees] = useState<Nominee[]>([]);
     const [results, setResults] = useState<VoteResult[]>([]);
-    const [votedCategories, setVotedCategories] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
     const [voting, setVoting] = useState<string | null>(null);
     const [error, setError] = useState('');
@@ -87,11 +90,13 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
 
     const handlePhoneSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (phone.length >= 10) {
+        if (phone.length >= 10 && voterName.trim().length >= 2) {
             setPhoneSubmitted(true);
             setError('');
-        } else {
+        } else if (phone.length < 10) {
             setError('Please enter a valid phone number');
+        } else {
+            setError('Please enter your name (at least 2 characters)');
         }
     };
 
@@ -109,16 +114,20 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
                     awardEventId: id,
                     categoryId,
                     nomineeId,
-                    voterPhone: phone
+                    voterPhone: phone,
+                    voterName: voterName.trim()
                 })
             });
 
             const data = await res.json();
 
             if (res.ok) {
-                setSuccess('Vote submitted successfully!');
-                setVotedCategories(prev => new Set([...prev, categoryId]));
-                fetchData();
+                setSuccess('Vote submitted!');
+                setHasVoted(true); // Mark as voted
+                // Auto-advance to next category or complete
+                setTimeout(() => {
+                    goToNextCategory();
+                }, 1000);
             } else {
                 setError(data.error || 'Failed to submit vote');
             }
@@ -128,6 +137,22 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
         } finally {
             setVoting(null);
         }
+    };
+
+    // Go to next category or mark voting as complete
+    const goToNextCategory = () => {
+        setError('');
+        setSuccess('');
+        if (currentCategoryIndex < categories.length - 1) {
+            setCurrentCategoryIndex(prev => prev + 1);
+        } else {
+            setVotingComplete(true);
+        }
+    };
+
+    // Skip current category and go to next
+    const skipCategory = () => {
+        goToNextCategory();
     };
 
     const getNomineesForCategory = (categoryId: string) => {
@@ -161,7 +186,7 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
                     <img
                         src={eventData.headerImage}
                         alt="Event Banner"
-                        className="w-full h-24 sm:h-32 md:h-48 object-cover rounded-xl mb-4 sm:mb-6 border border-border"
+                        className="w-full h-40 sm:h-52 md:h-72 object-cover rounded-xl mb-4 sm:mb-6 border border-border"
                     />
                 )}
 
@@ -227,28 +252,37 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
                 )}
             </header>
 
-            {/* Phone Verification */}
+            {/* Phone & Name Verification */}
             {!phoneSubmitted ? (
-                <section className="bg-card border border-border rounded-xl p-6 shadow-xl max-w-md mx-auto">
+                <section className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-xl max-w-md mx-auto">
                     <div className="flex items-center gap-3 mb-4 justify-center">
-                        <Phone className="w-6 h-6 text-purple-500" />
-                        <h2 className="text-xl font-bold">Enter Your Phone Number</h2>
+                        <Phone className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />
+                        <h2 className="text-lg sm:text-xl font-bold">Enter Your Details</h2>
                     </div>
-                    <p className="text-muted-foreground text-center mb-4 text-sm">
-                        Your phone number is used to ensure one vote per person per category.
+                    <p className="text-muted-foreground text-center mb-4 text-xs sm:text-sm">
+                        Each phone number can vote only once. Please enter your details.
                     </p>
                     <form onSubmit={handlePhoneSubmit} className="space-y-4">
+                        <input
+                            type="text"
+                            value={voterName}
+                            onChange={(e) => setVoterName(e.target.value)}
+                            placeholder="Enter your name"
+                            className="w-full bg-muted border border-border rounded-lg px-3 sm:px-4 py-3 text-white text-center text-base sm:text-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                            maxLength={100}
+                        />
                         <input
                             type="tel"
                             value={phone}
                             onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                             placeholder="Enter your phone number"
-                            className="w-full bg-muted border border-border rounded-lg px-4 py-3 text-white text-center text-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                            className="w-full bg-muted border border-border rounded-lg px-3 sm:px-4 py-3 text-white text-center text-base sm:text-lg focus:ring-2 focus:ring-purple-500 outline-none"
                             maxLength={15}
                         />
                         <button
                             type="submit"
-                            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-3 rounded-lg font-bold transition-colors"
+                            disabled={!voterName.trim() || phone.length < 10}
+                            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 text-white py-3 rounded-lg font-bold transition-colors"
                         >
                             Start Voting
                         </button>
@@ -270,21 +304,51 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
                         </div>
                     )}
 
-                    {/* Voting Categories */}
+                    {/* Voting Categories - Step by Step */}
                     {categories.length === 0 ? (
                         <div className="bg-muted/20 border border-dashed border-border rounded-xl p-12 text-center text-muted-foreground">
                             <Award className="w-12 h-12 mx-auto mb-4 opacity-50" />
                             No voting categories available yet.
                         </div>
+                    ) : votingComplete || hasVoted ? (
+                        /* Voting complete - show thank you message */
+                        <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-8 text-center">
+                            <Check className="w-16 h-16 text-green-400 mx-auto mb-4" />
+                            <h3 className="text-xl font-bold text-green-400 mb-2">Thank You for Voting!</h3>
+                            <p className="text-muted-foreground mb-4">
+                                {hasVoted
+                                    ? 'Your vote has been recorded. Each phone number can only vote once.'
+                                    : 'You have completed all voting categories.'}
+                            </p>
+                        </div>
                     ) : (
-                        <div className="space-y-6">
-                            {categories.map((category) => {
+                        <>
+                            {/* Progress Bar */}
+                            <div className="mb-6">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm text-muted-foreground">
+                                        Category {currentCategoryIndex + 1} of {categories.length}
+                                    </span>
+                                    <span className="text-sm text-purple-400 font-medium">
+                                        {Math.round(((currentCategoryIndex) / categories.length) * 100)}% Complete
+                                    </span>
+                                </div>
+                                <div className="w-full bg-muted/50 rounded-full h-2">
+                                    <div
+                                        className="bg-gradient-to-r from-purple-600 to-pink-600 h-2 rounded-full transition-all duration-300"
+                                        style={{ width: `${(currentCategoryIndex / categories.length) * 100}%` }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Current Category */}
+                            {(() => {
+                                const category = categories[currentCategoryIndex];
                                 const categoryNominees = getNomineesForCategory(category.id);
                                 const result = results.find(r => r.categoryId === category.id);
-                                const hasVoted = votedCategories.has(category.id);
 
                                 return (
-                                    <section key={category.id} className="bg-card border border-border rounded-xl overflow-hidden shadow-xl">
+                                    <section className="bg-card border border-border rounded-xl overflow-hidden shadow-xl">
                                         {/* Category Header */}
                                         <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 p-4 border-b border-border">
                                             <div className="flex items-center justify-between">
@@ -297,11 +361,14 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
                                                         )}
                                                     </div>
                                                 </div>
-                                                {hasVoted && (
-                                                    <span className="flex items-center gap-1 text-green-400 text-sm bg-green-500/10 px-3 py-1 rounded-full border border-green-500/30">
-                                                        <Check className="w-4 h-4" /> Voted
-                                                    </span>
-                                                )}
+                                                {/* Skip Button */}
+                                                <button
+                                                    onClick={skipCategory}
+                                                    disabled={!!voting}
+                                                    className="text-sm text-muted-foreground hover:text-white border border-border hover:border-white/50 px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                                                >
+                                                    Skip →
+                                                </button>
                                             </div>
                                         </div>
 
@@ -327,38 +394,42 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
                                         )}
 
                                         {/* Nominees */}
-                                        <div className="p-4">
+                                        <div className="p-3 sm:p-4">
                                             <h4 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
                                                 <Users className="w-4 h-4" />
-                                                Select a Nominee
+                                                Select a Nominee to Vote
                                             </h4>
                                             {categoryNominees.length === 0 ? (
-                                                <p className="text-muted-foreground text-sm py-4 text-center">
-                                                    No nominees in this category yet.
-                                                </p>
-                                            ) : hasVoted ? (
-                                                <p className="text-muted-foreground text-sm py-4 text-center">
-                                                    Thank you for voting in this category!
-                                                </p>
+                                                <div className="text-center py-8">
+                                                    <p className="text-muted-foreground text-sm mb-4">
+                                                        No nominees in this category yet.
+                                                    </p>
+                                                    <button
+                                                        onClick={skipCategory}
+                                                        className="text-sm bg-muted hover:bg-muted/80 text-white px-6 py-2 rounded-lg transition-colors"
+                                                    >
+                                                        Continue to Next Category →
+                                                    </button>
+                                                </div>
                                             ) : (
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <div className="grid grid-cols-1 gap-2 sm:gap-3">
                                                     {categoryNominees.map((nominee) => {
                                                         const isVoting = voting === `${category.id}-${nominee.id}`;
                                                         return (
                                                             <button
                                                                 key={nominee.id}
                                                                 onClick={() => submitVote(category.id, nominee.id)}
-                                                                disabled={!!voting || hasVoted}
-                                                                className="flex items-center gap-4 p-4 bg-muted/50 hover:bg-muted border border-border rounded-xl transition-all hover:border-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed group"
+                                                                disabled={!!voting}
+                                                                className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-muted/50 hover:bg-muted border border-border rounded-xl transition-all hover:border-purple-500/50 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group"
                                                             >
                                                                 {nominee.imageUrl ? (
                                                                     <img
                                                                         src={nominee.imageUrl}
                                                                         alt={nominee.name}
-                                                                        className="w-20 h-20 rounded-xl object-cover border-2 border-border group-hover:border-purple-500 transition-colors flex-shrink-0"
+                                                                        className="w-14 h-14 sm:w-20 sm:h-20 rounded-xl object-cover border-2 border-border group-hover:border-purple-500 transition-colors flex-shrink-0"
                                                                     />
                                                                 ) : (
-                                                                    <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center text-purple-400 font-bold text-2xl group-hover:from-purple-500 group-hover:to-pink-500 group-hover:text-white transition-colors flex-shrink-0">
+                                                                    <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center text-purple-400 font-bold text-xl sm:text-2xl group-hover:from-purple-500 group-hover:to-pink-500 group-hover:text-white transition-colors flex-shrink-0">
                                                                         {nominee.name.charAt(0).toUpperCase()}
                                                                     </div>
                                                                 )}
@@ -381,8 +452,8 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
                                         </div>
                                     </section>
                                 );
-                            })}
-                        </div>
+                            })()}
+                        </>
                     )}
 
 

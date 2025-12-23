@@ -1,10 +1,27 @@
 'use client';
-import { useState, useSyncExternalStore, memo, ReactNode } from 'react';
+import { useState, useSyncExternalStore, memo, ReactNode, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 interface PasswordGateProps {
     children: React.ReactNode;
 }
+
+// Public routes that don't require authentication
+const PUBLIC_ROUTES = [
+    '/awards/', // Matches /awards/[id]/vote
+    '/spot/',   // Matches /spot/[id]
+    '/register/', // Matches /register/[id]
+    '/vote/',   // Matches /vote/[eventId]
+];
+
+// Check if current path is a public route
+const isPublicRoute = (pathname: string): boolean => {
+    // Check for voting page specifically
+    if (pathname.includes('/vote')) return true;
+    // Check for other public routes
+    return PUBLIC_ROUTES.some(route => pathname.startsWith(route));
+};
 
 // Subscribe to storage changes
 const subscribe = (callback: () => void) => {
@@ -28,6 +45,14 @@ const AuthenticatedContent = memo(({ children }: { children: ReactNode }) => (
 AuthenticatedContent.displayName = 'AuthenticatedContent';
 
 export default function PasswordGate({ children }: PasswordGateProps) {
+    const pathname = usePathname();
+    const [isPublic, setIsPublic] = useState(false);
+
+    // Check if current route is public
+    useEffect(() => {
+        setIsPublic(isPublicRoute(pathname));
+    }, [pathname]);
+
     // Use useSyncExternalStore for synchronous localStorage access
     const authToken = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
     const isAuthenticated = authToken === 'authenticated';
@@ -65,6 +90,11 @@ export default function PasswordGate({ children }: PasswordGateProps) {
             setLoading(false);
         }
     };
+
+    // Public routes - show app content without authentication
+    if (isPublic) {
+        return <AuthenticatedContent>{children}</AuthenticatedContent>;
+    }
 
     // Authenticated - show app content immediately (no loading flash)
     if (isAuthenticated) {

@@ -55,11 +55,12 @@ const VoteSchema = new mongoose.Schema({
     eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true },
     nomineeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Attendee', required: true },
     voterPhone: { type: String, required: true },
+    voterName: { type: String, required: true }, // Voter's name
     createdAt: { type: Date, default: Date.now },
 });
 
-// Compound index to enforce one vote per phone per category
-VoteSchema.index({ categoryId: 1, voterPhone: 1 }, { unique: true });
+// Compound index to enforce one vote per phone per EVENT (only one vote total)
+VoteSchema.index({ eventId: 1, voterPhone: 1 }, { unique: true });
 
 export const AwardCategory = mongoose.models.AwardCategory || mongoose.model('AwardCategory', AwardCategorySchema);
 export const Vote = mongoose.models.Vote || mongoose.model('Vote', VoteSchema);
@@ -82,6 +83,7 @@ const NomineeSchema = new mongoose.Schema({
     name: { type: String, required: true },
     description: { type: String },
     imageUrl: { type: String },
+    position: { type: Number, default: 0 }, // Position for ordering within category
     createdAt: { type: Date, default: Date.now },
 });
 
