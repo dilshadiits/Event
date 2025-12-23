@@ -29,11 +29,15 @@ async function dbConnect() {
     if (!cached.promise) {
         const opts = {
             bufferCommands: false,
-            maxPoolSize: 10,
-            minPoolSize: 2,
-            serverSelectionTimeoutMS: 3000,
-            socketTimeoutMS: 30000,
-            heartbeatFrequencyMS: 10000,
+            maxPoolSize: 20, // Increased for more concurrent connections
+            minPoolSize: 5, // Keep more connections ready
+            serverSelectionTimeoutMS: 2000, // Faster timeout
+            socketTimeoutMS: 20000, // Reduced socket timeout
+            heartbeatFrequencyMS: 5000, // More frequent health checks
+            connectTimeoutMS: 5000, // Faster initial connect
+            maxIdleTimeMS: 30000, // Keep connections alive longer
+            retryWrites: true,
+            retryReads: true,
         };
 
         cached.promise = mongoose.connect(MONGODB_URI as string, opts).then((mongoose) => {
