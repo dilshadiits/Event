@@ -1,7 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 import { useState, useEffect, use, useCallback } from 'react';
-import { Trophy, Vote as VoteIcon, Check, Loader2, Phone, Award, Crown, Medal, Users } from 'lucide-react';
+import { useSession, signIn, signOut } from 'next-auth/react';
+import { Trophy, Vote as VoteIcon, Check, Loader2, Award, Crown, Medal, Users, LogOut, Mail } from 'lucide-react';
 
 interface Category {
     id: string;
@@ -44,13 +45,13 @@ interface VoteResult {
 
 export default function AwardVotePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
+    const { data: session, status } = useSession();
 
-    const [phone, setPhone] = useState('');
     const [voterName, setVoterName] = useState('');
-    const [phoneSubmitted, setPhoneSubmitted] = useState(false);
-    const [votedCategories, setVotedCategories] = useState<Set<string>>(new Set()); // Track voted categories
-    const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0); // Current category being voted on
-    const [votingComplete, setVotingComplete] = useState(false); // All categories done
+    const [nameConfirmed, setNameConfirmed] = useState(false);
+    const [votedCategories, setVotedCategories] = useState<Set<string>>(new Set());
+    const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
+    const [votingComplete, setVotingComplete] = useState(false);
     const [eventData, setEventData] = useState<AwardEventData | null>(null);
     const [categories, setCategories] = useState<Category[]>([]);
     const [nominees, setNominees] = useState<Nominee[]>([]);
@@ -59,6 +60,13 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
     const [voting, setVoting] = useState<string | null>(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+
+    // Pre-fill name from Google
+    useEffect(() => {
+        if (session?.user?.name && !voterName) {
+            setVoterName(session.user.name);
+        }
+    }, [session, voterName]);
 
     const fetchData = useCallback(async () => {
         try {
@@ -77,7 +85,6 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
             if (eventDataRes && !eventDataRes.error) setEventData(eventDataRes);
             if (Array.isArray(catData)) setCategories(catData.filter((c: Category) => c.isActive));
             if (Array.isArray(nomData)) {
-                // Sort nominees by position to ensure stable order
                 const sortedNominees = [...nomData].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
                 setNominees(sortedNominees);
             }
@@ -93,20 +100,8 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
         fetchData();
     }, [fetchData]);
 
-    const handlePhoneSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (phone.length >= 10 && voterName.trim().length >= 2) {
-            setPhoneSubmitted(true);
-            setError('');
-        } else if (phone.length < 10) {
-            setError('Please enter a valid phone number');
-        } else {
-            setError('Please enter your name (at least 2 characters)');
-        }
-    };
-
     const submitVote = async (categoryId: string, nomineeId: string) => {
-        if (voting) return;
+        if (voting || !session?.user?.email) return;
         setVoting(`${categoryId}-${nomineeId}`);
         setError('');
         setSuccess('');
@@ -119,8 +114,8 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
                     awardEventId: id,
                     categoryId,
                     nomineeId,
-                    voterPhone: phone,
-                    voterName: voterName.trim()
+                    voterEmail: session.user.email,
+                    voterName: voterName.trim() || session.user.name || 'Anonymous'
                 })
             });
 
@@ -128,11 +123,8 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
 
             if (res.ok) {
                 setSuccess('Vote submitted!');
-                setVotedCategories(prev => new Set([...prev, categoryId])); // Track voted category
-                // Auto-advance to next category or complete
-                setTimeout(() => {
-                    goToNextCategory();
-                }, 500);
+                setVotedCategories(prev => new Set([...prev, categoryId]));
+                setTimeout(() => goToNextCategory(), 500);
             } else {
                 setError(data.error || 'Failed to submit vote');
             }
@@ -144,7 +136,6 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
         }
     };
 
-    // Go to next category or mark voting as complete
     const goToNextCategory = () => {
         setError('');
         setSuccess('');
@@ -155,14 +146,9 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
         }
     };
 
-    // Skip current category and go to next
-    const skipCategory = () => {
-        goToNextCategory();
-    };
+    const skipCategory = () => goToNextCategory();
 
     const getNomineesForCategory = (categoryId: string) => {
-        // Only show nominees that are assigned to this specific category
-        // Sort by position to maintain consistent ordering
         return nominees
             .filter(n => n.categoryId === categoryId)
             .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
@@ -177,7 +163,7 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
         }
     };
 
-    if (loading) {
+    if (loading || status === 'loading') {
         return (
             <main className="min-h-screen flex items-center justify-center bg-background">
                 <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
@@ -185,73 +171,44 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
         );
     }
 
+    // Determine step
+    const isSignedIn = !!session?.user?.email;
+    const showVoting = isSignedIn && nameConfirmed;
+
     return (
         <main className="min-h-screen p-3 sm:p-4 md:p-8 max-w-4xl mx-auto space-y-4 sm:space-y-6">
-            {/* Header with Event Branding */}
+            {/* Header */}
             <header className="text-center py-4 sm:py-6">
-                {/* Header Banner */}
                 {eventData?.headerImage && (
-                    <img
-                        src={eventData.headerImage}
-                        alt="Event Banner"
-                        className="w-full h-40 sm:h-52 md:h-72 object-cover rounded-xl mb-4 sm:mb-6 border border-border"
-                    />
+                    <img src={eventData.headerImage} alt="Event Banner" className="w-full h-40 sm:h-52 md:h-72 object-cover rounded-xl mb-4 sm:mb-6 border border-border" />
                 )}
-
                 <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl sm:rounded-2xl mb-3 sm:mb-4">
                     <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                 </div>
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">
-                    {eventData?.name || 'Award Voting'}
-                </h1>
-                <p className="text-sm sm:text-base text-muted-foreground">{eventData?.description || 'Vote for your favorites in each category'}</p>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">{eventData?.name || 'Award Voting'}</h1>
+                <p className="text-sm sm:text-base text-muted-foreground">{eventData?.description || 'Vote for your favorites'}</p>
 
-                {/* Sponsors */}
                 {/* Sponsors */}
                 {eventData?.sponsorImages && eventData.sponsorImages.length > 0 && (
                     <div className="mt-6 pt-4 border-t border-border/50 space-y-6">
-
-                        {/* Main Sponsor & Digital Media Sponsor Row */}
                         <div className="flex flex-wrap justify-center items-start gap-6 sm:gap-10">
-                            {/* Main Sponsor */}
                             <div className="flex flex-col items-center gap-2">
                                 <span className="text-[10px] sm:text-xs uppercase tracking-widest text-yellow-500 font-semibold">Main Sponsor</span>
-                                <img
-                                    src={eventData.sponsorImages[0]}
-                                    alt="Main Sponsor"
-                                    className="h-16 sm:h-20 md:h-24 w-auto object-contain bg-white/10 rounded-lg px-4 py-2 border border-yellow-500/30"
-                                />
+                                <img src={eventData.sponsorImages[0]} alt="Main Sponsor" className="h-16 sm:h-20 md:h-24 w-auto object-contain bg-white/10 rounded-lg px-4 py-2 border border-yellow-500/30" />
                             </div>
-
-                            {/* Digital Media Sponsor */}
-                            {eventData.digitalMediaSponsorIndex >= 0 &&
-                                eventData.digitalMediaSponsorIndex < eventData.sponsorImages.length && (
-                                    <div className="flex flex-col items-center gap-2">
-                                        <span className="text-[10px] sm:text-xs uppercase tracking-widest text-cyan-400 font-semibold">Digital Media Sponsor</span>
-                                        <img
-                                            src={eventData.sponsorImages[eventData.digitalMediaSponsorIndex]}
-                                            alt="Digital Media Sponsor"
-                                            className="h-16 sm:h-20 md:h-24 w-auto object-contain bg-white/10 rounded-lg px-4 py-2 border border-cyan-500/30"
-                                        />
-                                    </div>
-                                )}
+                            {eventData.digitalMediaSponsorIndex >= 0 && eventData.digitalMediaSponsorIndex < eventData.sponsorImages.length && (
+                                <div className="flex flex-col items-center gap-2">
+                                    <span className="text-[10px] sm:text-xs uppercase tracking-widest text-cyan-400 font-semibold">Digital Media Sponsor</span>
+                                    <img src={eventData.sponsorImages[eventData.digitalMediaSponsorIndex]} alt="Digital Media Sponsor" className="h-16 sm:h-20 md:h-24 w-auto object-contain bg-white/10 rounded-lg px-4 py-2 border border-cyan-500/30" />
+                                </div>
+                            )}
                         </div>
-
-                        {/* Associate Sponsors */}
                         {eventData.sponsorImages.length > 1 && (
                             <div className="flex flex-col items-center gap-2 sm:gap-3">
                                 <span className="text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground font-medium">Associate Sponsors</span>
                                 <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
-                                    {eventData.sponsorImages.slice(1).filter((_, i) =>
-                                        // Don't show digital media sponsor in associate sponsors if it's already shown above
-                                        eventData.digitalMediaSponsorIndex !== i + 1
-                                    ).map((url, i) => (
-                                        <img
-                                            key={i}
-                                            src={url}
-                                            alt={`Associate Sponsor ${i + 1}`}
-                                            className="h-14 sm:h-16 md:h-20 w-auto object-contain bg-white/10 rounded-lg px-3 sm:px-4 py-2 border border-white/10"
-                                        />
+                                    {eventData.sponsorImages.slice(1).filter((_, i) => eventData.digitalMediaSponsorIndex !== i + 1).map((url, i) => (
+                                        <img key={i} src={url} alt={`Sponsor ${i + 1}`} className="h-14 sm:h-16 md:h-20 w-auto object-contain bg-white/10 rounded-lg px-3 sm:px-4 py-2 border border-white/10" />
                                     ))}
                                 </div>
                             </div>
@@ -260,102 +217,103 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
                 )}
             </header>
 
-            {/* Phone & Name Verification */}
-            {!phoneSubmitted ? (
+            {/* Sign In Section */}
+            {!isSignedIn && (
                 <section className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-xl max-w-md mx-auto">
                     <div className="flex items-center gap-3 mb-4 justify-center">
-                        <Phone className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />
-                        <h2 className="text-lg sm:text-xl font-bold">Enter Your Details</h2>
+                        <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />
+                        <h2 className="text-lg sm:text-xl font-bold">Sign In to Vote</h2>
                     </div>
                     <p className="text-muted-foreground text-center mb-4 text-xs sm:text-sm">
-                        Each phone number can vote only once. Please enter your details.
+                        Sign in with your Google account. Each email can vote once per category.
                     </p>
-                    <form onSubmit={handlePhoneSubmit} className="space-y-4">
+                    <button
+                        onClick={() => signIn('google')}
+                        className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-gray-800 py-3 rounded-lg font-medium transition-colors"
+                    >
+                        <svg className="w-5 h-5" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                        </svg>
+                        Sign in with Google
+                    </button>
+                </section>
+            )}
+
+            {/* Name Confirmation */}
+            {isSignedIn && !nameConfirmed && (
+                <section className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-xl max-w-md mx-auto">
+                    <div className="flex items-center gap-3 mb-4 justify-center">
+                        <Check className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" />
+                        <h2 className="text-lg sm:text-xl font-bold">Signed In!</h2>
+                    </div>
+                    <p className="text-muted-foreground text-center mb-2 text-xs sm:text-sm">
+                        Signed in as: <strong className="text-white">{session.user?.email}</strong>
+                    </p>
+                    <div className="space-y-4 mt-4">
                         <input
                             type="text"
                             value={voterName}
                             onChange={(e) => setVoterName(e.target.value)}
-                            placeholder="Enter your name"
-                            className="w-full bg-muted border border-border rounded-lg px-3 sm:px-4 py-3 text-white text-center text-base sm:text-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                            placeholder="Confirm your name"
+                            className="w-full bg-muted border border-border rounded-lg px-4 py-3 text-white text-center text-lg focus:ring-2 focus:ring-purple-500 outline-none"
                             maxLength={100}
                         />
-                        <input
-                            type="tel"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                            placeholder="Enter your phone number"
-                            className="w-full bg-muted border border-border rounded-lg px-3 sm:px-4 py-3 text-white text-center text-base sm:text-lg focus:ring-2 focus:ring-purple-500 outline-none"
-                            maxLength={15}
-                        />
                         <button
-                            type="submit"
-                            disabled={!voterName.trim() || phone.length < 10}
+                            onClick={() => setNameConfirmed(true)}
+                            disabled={voterName.trim().length < 2}
                             className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 text-white py-3 rounded-lg font-bold transition-colors"
                         >
                             Start Voting
                         </button>
-                    </form>
-                    {error && <p className="text-red-400 mt-2 text-sm text-center">{error}</p>}
+                        <button onClick={() => signOut()} className="w-full flex items-center justify-center gap-2 text-muted-foreground hover:text-white text-sm">
+                            <LogOut className="w-4 h-4" /> Sign out
+                        </button>
+                    </div>
                 </section>
-            ) : (
-                <>
-                    {/* Status Messages */}
-                    {error && (
-                        <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-center">
-                            {error}
-                        </div>
-                    )}
-                    {success && (
-                        <div className="bg-green-500/10 border border-green-500/30 text-green-400 px-4 py-3 rounded-lg flex items-center gap-2 justify-center">
-                            <Check className="w-5 h-5" />
-                            {success}
-                        </div>
-                    )}
+            )}
 
-                    {/* Voting Categories - Step by Step */}
+            {/* Voting Section */}
+            {showVoting && (
+                <>
+                    {/* Verified badge */}
+                    <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-2 sm:p-3 flex items-center justify-center gap-2 max-w-md mx-auto">
+                        <Check className="w-4 h-4 text-green-400" />
+                        <span className="text-sm text-green-400">{voterName} • {session.user?.email}</span>
+                    </div>
+
+                    {error && <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-center">{error}</div>}
+                    {success && <div className="bg-green-500/10 border border-green-500/30 text-green-400 px-4 py-3 rounded-lg flex items-center gap-2 justify-center"><Check className="w-5 h-5" />{success}</div>}
+
                     {categories.length === 0 ? (
                         <div className="bg-muted/20 border border-dashed border-border rounded-xl p-12 text-center text-muted-foreground">
                             <Award className="w-12 h-12 mx-auto mb-4 opacity-50" />
                             No voting categories available yet.
                         </div>
                     ) : votingComplete ? (
-                        /* Voting complete - show thank you message */
                         <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-8 text-center">
                             <Check className="w-16 h-16 text-green-400 mx-auto mb-4" />
                             <h3 className="text-xl font-bold text-green-400 mb-2">Thank You for Voting!</h3>
-                            <p className="text-muted-foreground mb-4">
-                                You have completed all voting categories. Your votes have been recorded.
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                                You voted in {votedCategories.size} of {categories.length} categories.
-                            </p>
+                            <p className="text-muted-foreground">You voted in {votedCategories.size} of {categories.length} categories.</p>
                         </div>
                     ) : (
                         <>
-                            {/* Progress Bar */}
+                            {/* Progress */}
                             <div className="mb-6">
                                 <div className="flex items-center justify-between mb-2">
-                                    <span className="text-sm text-muted-foreground">
-                                        Category {currentCategoryIndex + 1} of {categories.length}
-                                    </span>
-                                    <span className="text-sm text-purple-400 font-medium">
-                                        {Math.round(((currentCategoryIndex) / categories.length) * 100)}% Complete
-                                    </span>
+                                    <span className="text-sm text-muted-foreground">Category {currentCategoryIndex + 1} of {categories.length}</span>
+                                    <span className="text-sm text-purple-400 font-medium">{Math.round((currentCategoryIndex / categories.length) * 100)}% Complete</span>
                                 </div>
                                 <div className="w-full bg-muted/50 rounded-full h-2">
-                                    <div
-                                        className="bg-gradient-to-r from-purple-600 to-pink-600 h-2 rounded-full transition-all duration-300"
-                                        style={{ width: `${(currentCategoryIndex / categories.length) * 100}%` }}
-                                    />
+                                    <div className="bg-gradient-to-r from-purple-600 to-pink-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(currentCategoryIndex / categories.length) * 100}%` }} />
                                 </div>
                             </div>
 
                             {/* Current Category */}
                             {(() => {
-                                // Safety check to prevent crash
-                                if (currentCategoryIndex >= categories.length) {
-                                    return null;
-                                }
+                                if (currentCategoryIndex >= categories.length) return null;
                                 const category = categories[currentCategoryIndex];
                                 if (!category) return null;
                                 const categoryNominees = getNomineesForCategory(category.id);
@@ -363,101 +321,57 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
 
                                 return (
                                     <section className="bg-card border border-border rounded-xl overflow-hidden shadow-xl">
-                                        {/* Category Header */}
                                         <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 p-4 border-b border-border">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-3">
                                                     <Award className="w-6 h-6 text-purple-400" />
                                                     <div>
                                                         <h3 className="text-lg font-bold text-white">{category.name}</h3>
-                                                        {category.description && (
-                                                            <p className="text-sm text-muted-foreground">{category.description}</p>
-                                                        )}
+                                                        {category.description && <p className="text-sm text-muted-foreground">{category.description}</p>}
                                                     </div>
                                                 </div>
-                                                {/* Skip Button */}
-                                                <button
-                                                    onClick={skipCategory}
-                                                    disabled={!!voting}
-                                                    className="text-sm text-muted-foreground hover:text-white border border-border hover:border-white/50 px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
-                                                >
-                                                    Skip →
-                                                </button>
+                                                <button onClick={skipCategory} disabled={!!voting} className="text-sm text-muted-foreground hover:text-white border border-border hover:border-white/50 px-4 py-2 rounded-lg transition-colors disabled:opacity-50">Skip →</button>
                                             </div>
                                         </div>
 
-                                        {/* Results (if enabled) */}
                                         {category.showResults && result && result.leaderboard.length > 0 && (
                                             <div className="p-4 bg-muted/30 border-b border-border">
-                                                <h4 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-                                                    <Crown className="w-4 h-4 text-yellow-500" />
-                                                    Current Leaders
-                                                </h4>
+                                                <h4 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2"><Crown className="w-4 h-4 text-yellow-500" />Current Leaders</h4>
                                                 <div className="space-y-2">
                                                     {result.leaderboard.slice(0, 5).map((entry, idx) => (
                                                         <div key={entry.nomineeId} className="flex items-center gap-3 py-2">
                                                             {getRankIcon(idx)}
                                                             <span className="font-medium text-white flex-1">{entry.nomineeName}</span>
-                                                            {entry.voteCount !== undefined && (
-                                                                <span className="text-sm text-muted-foreground">{entry.voteCount} votes</span>
-                                                            )}
+                                                            {entry.voteCount !== undefined && <span className="text-sm text-muted-foreground">{entry.voteCount} votes</span>}
                                                         </div>
                                                     ))}
                                                 </div>
                                             </div>
                                         )}
 
-                                        {/* Nominees */}
                                         <div className="p-3 sm:p-4">
-                                            <h4 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-                                                <Users className="w-4 h-4" />
-                                                Select a Nominee to Vote
-                                            </h4>
+                                            <h4 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2"><Users className="w-4 h-4" />Select a Nominee</h4>
                                             {categoryNominees.length === 0 ? (
                                                 <div className="text-center py-8">
-                                                    <p className="text-muted-foreground text-sm mb-4">
-                                                        No nominees in this category yet.
-                                                    </p>
-                                                    <button
-                                                        onClick={skipCategory}
-                                                        className="text-sm bg-muted hover:bg-muted/80 text-white px-6 py-2 rounded-lg transition-colors"
-                                                    >
-                                                        Continue to Next Category →
-                                                    </button>
+                                                    <p className="text-muted-foreground text-sm mb-4">No nominees in this category.</p>
+                                                    <button onClick={skipCategory} className="text-sm bg-muted hover:bg-muted/80 text-white px-6 py-2 rounded-lg transition-colors">Continue →</button>
                                                 </div>
                                             ) : (
                                                 <div className="grid grid-cols-1 gap-2 sm:gap-3">
                                                     {categoryNominees.map((nominee) => {
                                                         const isVoting = voting === `${category.id}-${nominee.id}`;
                                                         return (
-                                                            <button
-                                                                key={nominee.id}
-                                                                onClick={() => submitVote(category.id, nominee.id)}
-                                                                disabled={!!voting}
-                                                                className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-muted/50 hover:bg-muted border border-border rounded-xl transition-all hover:border-purple-500/50 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group"
-                                                            >
+                                                            <button key={nominee.id} onClick={() => submitVote(category.id, nominee.id)} disabled={!!voting} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-muted/50 hover:bg-muted border border-border rounded-xl transition-all hover:border-purple-500/50 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group">
                                                                 {nominee.imageUrl ? (
-                                                                    <img
-                                                                        src={nominee.imageUrl}
-                                                                        alt={nominee.name}
-                                                                        className="w-14 h-14 sm:w-20 sm:h-20 rounded-xl object-cover border-2 border-border group-hover:border-purple-500 transition-colors flex-shrink-0"
-                                                                    />
+                                                                    <img src={nominee.imageUrl} alt={nominee.name} className="w-14 h-14 sm:w-20 sm:h-20 rounded-xl object-cover border-2 border-border group-hover:border-purple-500 transition-colors flex-shrink-0" />
                                                                 ) : (
-                                                                    <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center text-purple-400 font-bold text-xl sm:text-2xl group-hover:from-purple-500 group-hover:to-pink-500 group-hover:text-white transition-colors flex-shrink-0">
-                                                                        {nominee.name.charAt(0).toUpperCase()}
-                                                                    </div>
+                                                                    <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center text-purple-400 font-bold text-xl sm:text-2xl group-hover:from-purple-500 group-hover:to-pink-500 group-hover:text-white transition-colors flex-shrink-0">{nominee.name.charAt(0).toUpperCase()}</div>
                                                                 )}
                                                                 <div className="text-left flex-1">
                                                                     <p className="font-medium text-white">{nominee.name}</p>
-                                                                    {nominee.description && (
-                                                                        <p className="text-xs text-muted-foreground">{nominee.description}</p>
-                                                                    )}
+                                                                    {nominee.description && <p className="text-xs text-muted-foreground">{nominee.description}</p>}
                                                                 </div>
-                                                                {isVoting ? (
-                                                                    <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
-                                                                ) : (
-                                                                    <VoteIcon className="w-5 h-5 text-muted-foreground group-hover:text-purple-400 transition-colors" />
-                                                                )}
+                                                                {isVoting ? <Loader2 className="w-5 h-5 animate-spin text-purple-400" /> : <VoteIcon className="w-5 h-5 text-muted-foreground group-hover:text-purple-400 transition-colors" />}
                                                             </button>
                                                         );
                                                     })}
@@ -469,8 +383,6 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
                             })()}
                         </>
                     )}
-
-
                 </>
             )}
         </main>

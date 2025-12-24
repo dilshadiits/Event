@@ -9,7 +9,7 @@ const submitAwardVoteSchema = z.object({
     awardEventId: z.string().min(1),
     categoryId: z.string().min(1),
     nomineeId: z.string().min(1),
-    voterPhone: z.string().min(10).max(15).trim(),
+    voterEmail: z.string().email().trim(),
     voterName: z.string().min(1).max(100).trim(),
 });
 
@@ -93,21 +93,21 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         return errorResponse('Nominee not found', 404);
     }
 
-    // Normalize phone number (remove non-digits, take last 10 digits)
-    const normalizedPhone = validated.voterPhone.replace(/\D/g, '').slice(-10);
+    // Normalize email to lowercase
+    const normalizedEmail = validated.voterEmail.toLowerCase().trim();
 
-    // Admin phone number can vote unlimited times (bypass duplicate check)
-    const ADMIN_PHONE = (process.env.ADMIN_PHONE || '7736909993').replace(/\D/g, '').slice(-10);
+    // Admin email can vote unlimited times (bypass duplicate check)
+    const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'admin@example.com').toLowerCase();
     const ADMIN_NAME = process.env.ADMIN_NAME || 'admin';
-    const isAdminVoter = normalizedPhone === ADMIN_PHONE || validated.voterName.toLowerCase() === ADMIN_NAME.toLowerCase();
+    const isAdminVoter = normalizedEmail === ADMIN_EMAIL || validated.voterName.toLowerCase() === ADMIN_NAME.toLowerCase();
 
-    // Check if user already voted in this CATEGORY for this EVENT (one vote per phone per category)
-    // Skip this check for admin phone
+    // Check if user already voted in this CATEGORY for this EVENT (one vote per email per category)
+    // Skip this check for admin
     if (!isAdminVoter) {
         const existingVote = await Vote.findOne({
             eventId: validated.awardEventId,
             categoryId: validated.categoryId,
-            voterPhone: normalizedPhone
+            voterEmail: normalizedEmail
         });
 
         if (existingVote) {
@@ -115,12 +115,12 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         }
     }
 
-    // Create the vote (store normalized phone for consistent checking)
+    // Create the vote
     const vote = await Vote.create({
         categoryId: validated.categoryId,
-        eventId: validated.awardEventId, // Using eventId field for awardEventId
+        eventId: validated.awardEventId,
         nomineeId: validated.nomineeId,
-        voterPhone: normalizedPhone, // Store normalized phone
+        voterEmail: normalizedEmail,
         voterName: validated.voterName,
     });
 

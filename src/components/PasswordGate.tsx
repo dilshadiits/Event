@@ -68,7 +68,7 @@ export default function PasswordGate({ children }: PasswordGateProps) {
         setError('');
 
         try {
-            const res = await fetch('/api/auth', {
+            const res = await fetch('/api/password', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ password })

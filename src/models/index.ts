@@ -54,13 +54,15 @@ const VoteSchema = new mongoose.Schema({
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'AwardCategory', required: true },
     eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true },
     nomineeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Attendee', required: true },
-    voterPhone: { type: String, required: true },
-    voterName: { type: String, required: true }, // Voter's name
+    voterPhone: { type: String }, // Optional for backward compatibility
+    voterEmail: { type: String }, // Email for Google OAuth users
+    voterName: { type: String, required: true },
     createdAt: { type: Date, default: Date.now },
 });
 
-// Compound index for efficient lookups (not unique to allow admin unlimited voting)
+// Compound indexes for efficient lookups
 VoteSchema.index({ categoryId: 1, voterPhone: 1 });
+VoteSchema.index({ categoryId: 1, voterEmail: 1 });
 
 export const AwardCategory = mongoose.models.AwardCategory || mongoose.model('AwardCategory', AwardCategorySchema);
 export const Vote = mongoose.models.Vote || mongoose.model('Vote', VoteSchema);
@@ -90,3 +92,16 @@ const NomineeSchema = new mongoose.Schema({
 export const AwardEvent = mongoose.models.AwardEvent || mongoose.model('AwardEvent', AwardEventSchema);
 export const Nominee = mongoose.models.Nominee || mongoose.model('Nominee', NomineeSchema);
 
+// OTP Schema - temporary storage for phone verification
+const OTPSchema = new mongoose.Schema({
+    phone: { type: String, required: true, index: true },
+    code: { type: String, required: true },
+    expiresAt: { type: Date, required: true },
+    verified: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now },
+});
+
+// Auto-delete expired OTPs (TTL index)
+OTPSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+export const OTP = mongoose.models.OTP || mongoose.model('OTP', OTPSchema);
