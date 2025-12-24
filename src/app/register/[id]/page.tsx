@@ -38,8 +38,8 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.name || !formData.phone) {
-            setError('Name and Phone are required.');
+        if (!formData.name) {
+            setError('Name is required.');
             return;
         }
         setLoading(true);
@@ -242,13 +242,12 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
                                 </div>
 
                                 <div>
-                                    <label className="text-sm font-medium text-white mb-1.5 block">Phone Number *</label>
+                                    <label className="text-sm font-medium text-white mb-1.5 block">Phone Number (Optional)</label>
                                     <div className="relative">
                                         <Phone className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
                                         <input
                                             type="tel"
                                             name="phone"
-                                            required
                                             value={formData.phone}
                                             onChange={handleChange}
                                             className="w-full bg-muted/50 border border-border rounded-xl pl-10 pr-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"

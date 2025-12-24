@@ -46,6 +46,12 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
     const [newCatDesc, setNewCatDesc] = useState('');
     const [creatingCat, setCreatingCat] = useState(false);
 
+    // Category edit modal
+    const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+    const [editCatName, setEditCatName] = useState('');
+    const [editCatDesc, setEditCatDesc] = useState('');
+    const [savingCategory, setSavingCategory] = useState(false);
+
     // Nominee form
     const [newNomineeName, setNewNomineeName] = useState('');
     const [newNomineeDesc, setNewNomineeDesc] = useState('');
@@ -197,6 +203,43 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
         }
     };
 
+    // Open edit modal for category
+    const openEditCategory = (cat: Category) => {
+        setEditingCategory(cat);
+        setEditCatName(cat.name);
+        setEditCatDesc(cat.description || '');
+    };
+
+    // Save edited category
+    const saveEditedCategory = async () => {
+        if (!editingCategory || !editCatName.trim() || savingCategory) return;
+
+        setSavingCategory(true);
+        try {
+            const res = await fetch('/api/categories', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: editingCategory.id,
+                    name: editCatName,
+                    description: editCatDesc
+                })
+            });
+
+            if (res.ok) {
+                setEditingCategory(null);
+                fetchData();
+            } else {
+                const data = await res.json();
+                console.error('Failed to update category:', data.error);
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setSavingCategory(false);
+        }
+    };
+
     // Nominee CRUD
     const createNominee = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -290,14 +333,16 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
 
         const swapNominee = categoryNominees[swapIndex];
 
+        // Use the array indices as the new positions to ensure the swap works
+        // even when nominees have the same position value
         try {
             await fetch('/api/nominees', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     positions: [
-                        { id: nominee.id, position: swapNominee.position },
-                        { id: swapNominee.id, position: nominee.position }
+                        { id: nominee.id, position: swapIndex },
+                        { id: swapNominee.id, position: currentIndex }
                     ]
                 })
             });
@@ -586,6 +631,13 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                                         title={cat.showResults ? 'Results visible' : 'Results hidden'}
                                     >
                                         {cat.showResults ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                                    </button>
+                                    <button
+                                        onClick={() => openEditCategory(cat)}
+                                        className="p-1.5 text-muted-foreground hover:text-blue-400 hover:bg-blue-500/10 rounded"
+                                        title="Edit category"
+                                    >
+                                        <Edit2 className="w-3 h-3" />
                                     </button>
                                     <button
                                         onClick={() => deleteCategory(cat.id)}
@@ -917,6 +969,66 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                                     className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-medium transition-colors"
                                 >
                                     {savingNominee ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                    Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Category Modal */}
+            {editingCategory && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md relative animate-in fade-in zoom-in duration-200">
+                        <button
+                            onClick={() => setEditingCategory(null)}
+                            className="absolute top-4 right-4 p-1 text-muted-foreground hover:text-white rounded-lg hover:bg-muted transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <Edit2 className="w-5 h-5 text-purple-400" />
+                            Edit Category
+                        </h3>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-sm text-muted-foreground block mb-1">Name *</label>
+                                <input
+                                    type="text"
+                                    value={editCatName}
+                                    onChange={(e) => setEditCatName(e.target.value)}
+                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                                    placeholder="Category name"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-muted-foreground block mb-1">Description</label>
+                                <textarea
+                                    value={editCatDesc}
+                                    onChange={(e) => setEditCatDesc(e.target.value)}
+                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-purple-500 outline-none resize-none"
+                                    rows={2}
+                                    placeholder="Brief description (optional)"
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={() => setEditingCategory(null)}
+                                    className="flex-1 px-4 py-2 border border-border text-muted-foreground rounded-lg hover:bg-muted transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={saveEditedCategory}
+                                    disabled={!editCatName.trim() || savingCategory}
+                                    className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                                >
+                                    {savingCategory ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                                     Save Changes
                                 </button>
                             </div>

@@ -85,7 +85,7 @@ export async function POST(req: Request) {
         const newAttendee = await Attendee.create({
             name: sanitizeString(name),
             email: email || undefined,
-            phone: phone.trim(),
+            phone: phone?.trim() || undefined,
             instagram: instagram ? sanitizeString(instagram) : undefined,
             youtube: youtube ? sanitizeString(youtube) : undefined,
             category: category ? sanitizeString(category) : undefined,

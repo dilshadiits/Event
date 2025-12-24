@@ -13,7 +13,7 @@ const AttendeeSchema = new mongoose.Schema({
     eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true, index: true },
     name: { type: String, required: true },
     email: { type: String, required: false },
-    phone: { type: String, required: true, index: true },
+    phone: { type: String, required: false, index: true },
     instagram: { type: String },
     youtube: { type: String },
     category: { type: String },

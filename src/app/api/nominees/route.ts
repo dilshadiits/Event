@@ -166,14 +166,32 @@ export const PATCH = withErrorHandler(async (req: NextRequest) => {
     const body = await req.json();
     const validated = updatePositionsSchema.parse(body);
 
+    // Validate all IDs are valid ObjectIds
+    for (const item of validated.positions) {
+        if (!isValidObjectId(item.id)) {
+            return errorResponse(`Invalid nominee ID: ${item.id}`, 400);
+        }
+    }
+
     await connectDB();
 
-    // Update all positions in parallel
-    await Promise.all(
-        validated.positions.map(({ id, position }) =>
-            Nominee.findByIdAndUpdate(id, { position })
-        )
+    // Update all positions and verify they were updated
+    const results = await Promise.all(
+        validated.positions.map(async ({ id, position }) => {
+            const result = await Nominee.findByIdAndUpdate(
+                id,
+                { $set: { position } },
+                { new: true }
+            );
+            return { id, position, success: !!result, newPosition: result?.position };
+        })
     );
 
-    return successResponse({ success: true, updated: validated.positions.length });
+    // Check if any updates failed
+    const failed = results.filter(r => !r.success);
+    if (failed.length > 0) {
+        return errorResponse(`Failed to update some nominees: ${failed.map(f => f.id).join(', ')}`, 404);
+    }
+
+    return successResponse({ success: true, updated: validated.positions.length, results });
 });
