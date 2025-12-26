@@ -16,13 +16,20 @@ export async function POST(req: Request) {
 
         const { scanData, eventId } = result.data;
 
-        // Check if this is a guest QR code (format: {attendeeId}-GUEST-{number})
-        const isGuestQR = scanData.includes('-GUEST-');
+        // Check if this is a guest QR code (formats: {attendeeId}-GUEST-{number} or {attendeeId}_guest_{guestName})
+        const isOldGuestFormat = scanData.includes('-GUEST-');
+        const isNewGuestFormat = scanData.includes('_guest_');
+        const isGuestQR = isOldGuestFormat || isNewGuestFormat;
         let attendeeId = scanData;
+        let guestName = '';
 
-        if (isGuestQR) {
+        if (isOldGuestFormat) {
             const parts = scanData.split('-GUEST-');
             attendeeId = parts[0];
+        } else if (isNewGuestFormat) {
+            const parts = scanData.split('_guest_');
+            attendeeId = parts[0];
+            guestName = parts[1] || '';
         }
 
         // Validate ObjectId format
@@ -61,13 +68,16 @@ export async function POST(req: Request) {
                 });
             }
 
+            // If specific guest name provided, verify it matches
+            const displayName = guestName || attendee.guest_names;
+
             // Check if guest already checked in
             if (attendee.guest_checked_in) {
                 return successResponse({
                     success: false,
                     message: `Guest already checked in at ${new Date(attendee.guest_checked_in_at).toLocaleTimeString()}`,
                     attendee: {
-                        name: attendee.guest_names,
+                        name: displayName,
                         email: `Guest of ${attendee.name}`,
                         guest_names: ''
                     }
@@ -83,7 +93,7 @@ export async function POST(req: Request) {
                 success: true,
                 message: 'Guest Check-in Successful!',
                 attendee: {
-                    name: attendee.guest_names,
+                    name: displayName,
                     email: `Guest of ${attendee.name}`,
                     guest_names: ''
                 }

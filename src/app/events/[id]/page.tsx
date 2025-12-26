@@ -34,6 +34,7 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
 
     // Modal State
     const [selectedAttendee, setSelectedAttendee] = useState<Attendee | null>(null);
+    const [selectedGuest, setSelectedGuest] = useState<{ attendeeId: string; guestName: string } | null>(null);
     const [editingAttendee, setEditingAttendee] = useState<Attendee | null>(null);
     const [isGeneratingAll, setIsGeneratingAll] = useState(false);
     const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0 });
@@ -352,9 +353,20 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                                                     <span>{attendee.phone}</span>
                                                 </div>
                                                 {attendee.guest_names && (
-                                                    <div className="flex items-center gap-1.5 text-orange-300/80">
-                                                        <Users className="w-3.5 h-3.5" />
-                                                        <span>Guest: {attendee.guest_names}</span>
+                                                    <div className="flex items-center gap-1.5 text-orange-300/80 flex-wrap">
+                                                        <Users className="w-3.5 h-3.5 shrink-0" />
+                                                        <span className="mr-1">Guests:</span>
+                                                        {attendee.guest_names.split(',').map((guest, idx) => (
+                                                            <button
+                                                                key={idx}
+                                                                onClick={() => setSelectedGuest({ attendeeId: attendee.id, guestName: guest.trim() })}
+                                                                className="inline-flex items-center gap-1 bg-orange-500/20 hover:bg-orange-500/40 px-2 py-0.5 rounded-full text-xs border border-orange-500/30 transition-all cursor-pointer"
+                                                                title={`View ${guest.trim()}'s Entry Pass`}
+                                                            >
+                                                                <QrCode className="w-3 h-3" />
+                                                                {guest.trim()}
+                                                            </button>
+                                                        ))}
                                                     </div>
                                                 )}
                                             </div>
@@ -406,6 +418,15 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                 onClose={() => setSelectedAttendee(null)}
                 value={selectedAttendee?.id || ''}
                 name={selectedAttendee?.name || ''}
+                eventName={eventName}
+            />
+
+            {/* Guest QR Code Modal */}
+            <QRCodeModal
+                isOpen={!!selectedGuest}
+                onClose={() => setSelectedGuest(null)}
+                value={selectedGuest ? `${selectedGuest.attendeeId}_guest_${selectedGuest.guestName}` : ''}
+                name={selectedGuest ? `${selectedGuest.guestName} (Guest)` : ''}
                 eventName={eventName}
             />
 
