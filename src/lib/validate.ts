@@ -20,6 +20,19 @@ export const createAttendeeSchema = z.object({
     inviteCode: z.string().optional().nullable(),
 });
 
+// Update attendee validation
+export const updateAttendeeSchema = z.object({
+    id: z.string().min(1, 'Attendee ID is required'),
+    name: z.string().min(1, 'Name is required').max(100, 'Name too long').trim().optional(),
+    email: z.string().email('Invalid email format').optional().or(z.literal('')).nullable(),
+    phone: z.string().min(10, 'Phone must be at least 10 digits').max(15, 'Phone too long').trim().optional().or(z.literal('')).nullable(),
+    instagram: z.string().max(50).optional().nullable(),
+    youtube: z.string().max(100).optional().nullable(),
+    category: z.string().max(50).optional().nullable(),
+    guest_names: z.string().max(500).optional().nullable(),
+    meal_preference: z.enum(['veg', 'non-veg']).optional().nullable(),
+});
+
 // Scan validation
 export const scanDataSchema = z.object({
     scanData: z.string().min(1, 'Scan data is required'),

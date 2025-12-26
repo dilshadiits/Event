@@ -1,8 +1,10 @@
 'use client';
-import { useState, useEffect, use, useCallback } from 'react';
+import { useState, useEffect, use, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Search, QrCode, CheckCircle, Instagram, Phone, Users, Link as LinkIcon, Check, Trash2, Zap, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Search, QrCode, CheckCircle, Instagram, Phone, Users, Link as LinkIcon, Check, Trash2, Zap, RefreshCw, Edit, Download, Loader2 } from 'lucide-react';
 import QRCodeModal from '@/components/QRCodeModal';
+import EditAttendeeModal from '@/components/EditAttendeeModal';
+import { QRCodeCanvas } from 'qrcode.react';
 
 interface Attendee {
     id: string;
@@ -16,6 +18,7 @@ interface Attendee {
     status: 'registered' | 'checked-in';
     checked_in_at: string | null;
     created_at: string;
+    meal_preference?: 'veg' | 'non-veg';
 }
 
 export default function EventPage({ params }: { params: Promise<{ id: string }> }) {
@@ -29,9 +32,12 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
     const [copied, setCopied] = useState(false);
     const [inviteCopied, setInviteCopied] = useState(false);
 
-
     // Modal State
     const [selectedAttendee, setSelectedAttendee] = useState<Attendee | null>(null);
+    const [editingAttendee, setEditingAttendee] = useState<Attendee | null>(null);
+    const [isGeneratingAll, setIsGeneratingAll] = useState(false);
+    const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0 });
+    const qrContainerRef = useRef<HTMLDivElement>(null);
 
     const fetchAttendees = useCallback(async (showRefresh = false) => {
         if (showRefresh) setIsRefreshing(true);
@@ -95,6 +101,111 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
         }
     };
 
+    const handleAttendeeUpdate = (updated: Attendee) => {
+        setAttendees(prev => prev.map(a => a.id === updated.id ? updated : a));
+    };
+
+    const generateAllQRCodes = async () => {
+        if (attendees.length === 0) return;
+
+        setIsGeneratingAll(true);
+        setGenerationProgress({ current: 0, total: attendees.length });
+
+        try {
+            // Load template image
+            const templateImg = new Image();
+            templateImg.crossOrigin = 'anonymous';
+            templateImg.src = '/entry-pass-template.jpg';
+
+            await new Promise((resolve, reject) => {
+                templateImg.onload = resolve;
+                templateImg.onerror = reject;
+            });
+
+            for (let i = 0; i < attendees.length; i++) {
+                const attendee = attendees[i];
+                setGenerationProgress({ current: i + 1, total: attendees.length });
+
+                // Create QR code canvas
+                const qrCanvas = document.createElement('canvas');
+                const qrSize = 300;
+                qrCanvas.width = qrSize;
+                qrCanvas.height = qrSize;
+
+                // Use the QRCodeCanvas to render
+                const qrContainer = document.createElement('div');
+                qrContainer.style.position = 'absolute';
+                qrContainer.style.left = '-9999px';
+                document.body.appendChild(qrContainer);
+
+                const { createRoot } = await import('react-dom/client');
+                const root = createRoot(qrContainer);
+
+                await new Promise<void>((resolve) => {
+                    root.render(
+                        <QRCodeCanvas
+                            value={attendee.id}
+                            size={300}
+                            level="H"
+                            includeMargin={false}
+                        />
+                    );
+                    setTimeout(resolve, 100);
+                });
+
+                const qrCanvasElement = qrContainer.querySelector('canvas');
+                if (!qrCanvasElement) {
+                    root.unmount();
+                    document.body.removeChild(qrContainer);
+                    continue;
+                }
+
+                // Create final canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = templateImg.width;
+                canvas.height = templateImg.height;
+                const ctx = canvas.getContext('2d');
+
+                if (ctx) {
+                    ctx.drawImage(templateImg, 0, 0);
+
+                    const qrSizeFinal = Math.min(templateImg.width * 0.38, templateImg.height * 0.22);
+                    const qrX = (templateImg.width - qrSizeFinal) / 2;
+                    const qrY = templateImg.height * 0.48;
+
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(qrX - 10, qrY - 10, qrSizeFinal + 20, qrSizeFinal + 50);
+                    ctx.drawImage(qrCanvasElement, qrX, qrY, qrSizeFinal, qrSizeFinal);
+
+                    ctx.fillStyle = '#000000';
+                    ctx.font = `bold ${Math.floor(qrSizeFinal * 0.12)}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.fillText(attendee.name.toUpperCase(), templateImg.width / 2, qrY + qrSizeFinal + 30);
+
+                    // Download
+                    const dataUrl = canvas.toDataURL('image/png');
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = dataUrl;
+                    downloadLink.download = `${attendee.name.replace(/\s+/g, '_')}_Entry_Pass.png`;
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                }
+
+                root.unmount();
+                document.body.removeChild(qrContainer);
+
+                // Small delay between downloads
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+        } catch (error) {
+            console.error('Failed to generate QR codes:', error);
+        } finally {
+            setIsGeneratingAll(false);
+            setGenerationProgress({ current: 0, total: 0 });
+        }
+    };
+
 
     const filtered = attendees.filter(a =>
         a.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -148,6 +259,23 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                         <Zap className="w-3 h-3" />
                         Spot Reg.
                     </Link>
+                    <button
+                        onClick={generateAllQRCodes}
+                        disabled={isGeneratingAll || attendees.length === 0}
+                        className="flex items-center gap-2 bg-green-600/20 hover:bg-green-600/40 disabled:opacity-50 text-green-400 text-xs px-3 py-2 rounded-full transition-all border border-green-500/30"
+                    >
+                        {isGeneratingAll ? (
+                            <>
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                {generationProgress.current}/{generationProgress.total}
+                            </>
+                        ) : (
+                            <>
+                                <Download className="w-3 h-3" />
+                                All QR
+                            </>
+                        )}
+                    </button>
                 </div>
 
                 {/* Stats */}
@@ -245,6 +373,13 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                                         </div>
 
                                         <button
+                                            onClick={() => setEditingAttendee(attendee)}
+                                            className="p-2 text-muted-foreground hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all"
+                                            title="Edit Attendee"
+                                        >
+                                            <Edit className="w-6 h-6" />
+                                        </button>
+                                        <button
                                             onClick={() => setSelectedAttendee(attendee)}
                                             className="p-2 text-muted-foreground hover:text-white hover:bg-white/10 rounded-lg transition-all"
                                             title="View QR Code"
@@ -273,6 +408,16 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                 name={selectedAttendee?.name || ''}
                 eventName={eventName}
             />
+
+            <EditAttendeeModal
+                attendee={editingAttendee}
+                isOpen={!!editingAttendee}
+                onClose={() => setEditingAttendee(null)}
+                onSave={handleAttendeeUpdate}
+            />
+
+            {/* Hidden container for QR generation */}
+            <div ref={qrContainerRef} className="hidden" />
         </main >
     );
 }

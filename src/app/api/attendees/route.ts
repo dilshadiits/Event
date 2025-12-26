@@ -1,6 +1,6 @@
 import dbConnect from '@/lib/mongodb';
 import { Attendee, InviteCode } from '@/models';
-import { createAttendeeSchema, sanitizeString, isValidObjectId } from '@/lib/validate';
+import { createAttendeeSchema, updateAttendeeSchema, sanitizeString, isValidObjectId } from '@/lib/validate';
 import { errorResponse, successResponse, checkRateLimit, getClientIP } from '@/lib/api-utils';
 
 export async function GET(req: Request) {
@@ -142,5 +142,64 @@ export async function DELETE(req: Request) {
     } catch (error) {
         console.error('[Attendees DELETE]', error);
         return errorResponse('Failed to delete attendee');
+    }
+}
+
+export async function PUT(req: Request) {
+    try {
+        const body = await req.json();
+
+        // Validate input with Zod
+        const result = updateAttendeeSchema.safeParse(body);
+        if (!result.success) {
+            const message = result.error.issues.map((e) => e.message).join(', ');
+            return errorResponse(message, 400);
+        }
+
+        const { id, name, email, phone, instagram, youtube, category, guest_names, meal_preference } = result.data;
+
+        if (!isValidObjectId(id)) {
+            return errorResponse('Invalid Attendee ID format', 400);
+        }
+
+        await dbConnect();
+
+        // Build update object with only provided fields
+        const updateData: Record<string, unknown> = {};
+        if (name !== undefined) updateData.name = sanitizeString(name);
+        if (email !== undefined) updateData.email = email || undefined;
+        if (phone !== undefined) updateData.phone = phone?.trim() || undefined;
+        if (instagram !== undefined) updateData.instagram = instagram ? sanitizeString(instagram) : undefined;
+        if (youtube !== undefined) updateData.youtube = youtube ? sanitizeString(youtube) : undefined;
+        if (category !== undefined) updateData.category = category ? sanitizeString(category) : undefined;
+        if (guest_names !== undefined) updateData.guest_names = guest_names ? sanitizeString(guest_names) : undefined;
+        if (meal_preference !== undefined) updateData.meal_preference = meal_preference;
+
+        const updatedAttendee = await Attendee.findByIdAndUpdate(
+            id,
+            { $set: updateData },
+            { new: true }
+        ).lean();
+
+        if (!updatedAttendee) {
+            return errorResponse('Attendee not found', 404);
+        }
+
+        return successResponse({
+            id: updatedAttendee._id.toString(),
+            name: updatedAttendee.name,
+            email: updatedAttendee.email,
+            phone: updatedAttendee.phone,
+            instagram: updatedAttendee.instagram,
+            youtube: updatedAttendee.youtube,
+            category: updatedAttendee.category,
+            guest_names: updatedAttendee.guest_names,
+            meal_preference: updatedAttendee.meal_preference,
+            eventId: updatedAttendee.eventId,
+            status: updatedAttendee.status
+        });
+    } catch (error) {
+        console.error('[Attendees PUT]', error);
+        return errorResponse('Failed to update attendee');
     }
 }
