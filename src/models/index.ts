@@ -57,6 +57,7 @@ const VoteSchema = new mongoose.Schema({
     voterPhone: { type: String }, // Optional for backward compatibility
     voterEmail: { type: String }, // Email for Google OAuth users
     voterName: { type: String, required: true },
+    voteWeight: { type: Number, default: 1 }, // Admin votes count as 20
     createdAt: { type: Date, default: Date.now },
 });
 

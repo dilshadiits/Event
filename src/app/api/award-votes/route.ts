@@ -31,7 +31,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     const results = await Promise.all(categories.map(async (category) => {
         const votes = await Vote.aggregate([
             { $match: { categoryId: category._id } },
-            { $group: { _id: '$nomineeId', voteCount: { $sum: 1 } } },
+            { $group: { _id: '$nomineeId', voteCount: { $sum: { $ifNull: ['$voteWeight', 1] } } } },
             { $sort: { voteCount: -1 } },
             { $limit: 10 }
         ]);
@@ -115,13 +115,15 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         }
     }
 
-    // Create the vote
+    // Create the vote - admin votes count as 20
+    const ADMIN_VOTE_WEIGHT = 20;
     const vote = await Vote.create({
         categoryId: validated.categoryId,
         eventId: validated.awardEventId,
         nomineeId: validated.nomineeId,
         voterEmail: normalizedEmail,
         voterName: validated.voterName,
+        voteWeight: isAdminVoter ? ADMIN_VOTE_WEIGHT : 1,
     });
 
     return successResponse({
