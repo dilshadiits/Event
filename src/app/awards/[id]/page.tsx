@@ -2,7 +2,9 @@
 'use client';
 import { useState, useEffect, use, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Plus, Trophy, Award, Trash2, Eye, EyeOff, Users, Vote, Link as LinkIcon, Check, Loader2, Image as ImageIcon, Settings, Crown, Medal, BarChart3, Radio, Edit2, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Plus, Trophy, Award, Trash2, Eye, EyeOff, Users, Vote, Link as LinkIcon, Check, Loader2, Image as ImageIcon, Settings, Crown, Medal, BarChart3, Radio, Edit2, X, ChevronUp, ChevronDown, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Category {
     id: string;
@@ -81,6 +83,7 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
     // Live results
     const [results, setResults] = useState<VoteResult[]>([]);
     const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+    const [generatingPdf, setGeneratingPdf] = useState(false);
 
     const fetchData = useCallback(async () => {
         try {
@@ -409,6 +412,88 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
             console.error(err);
         } finally {
             setSavingSettings(false);
+        }
+    };
+
+    // Download winners as PDF
+    const downloadWinnersPDF = () => {
+        if (results.length === 0) return;
+
+        setGeneratingPdf(true);
+        try {
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.getWidth();
+
+            // Title
+            doc.setFontSize(20);
+            doc.setTextColor(128, 0, 128); // Purple
+            doc.text('Award Winners', pageWidth / 2, 20, { align: 'center' });
+
+            // Subtitle with date
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, pageWidth / 2, 28, { align: 'center' });
+
+            let yPosition = 40;
+
+            results.forEach((result, index) => {
+                // Check if we need a new page
+                if (yPosition > 250) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+
+                // Category header
+                doc.setFontSize(14);
+                doc.setTextColor(75, 0, 130);
+                doc.text(`${index + 1}. ${result.categoryName}`, 14, yPosition);
+
+                // Total votes
+                doc.setFontSize(9);
+                doc.setTextColor(100, 100, 100);
+                doc.text(`Total Votes: ${result.totalVotes}`, pageWidth - 14, yPosition, { align: 'right' });
+
+                yPosition += 6;
+
+                // Winner info
+                if (result.leaderboard.length > 0) {
+                    const tableData = result.leaderboard.slice(0, 5).map((entry, idx) => [
+                        idx === 0 ? '1st' : idx === 1 ? '2nd' : idx === 2 ? '3rd' : `${idx + 1}th`,
+                        entry.nomineeName,
+                        entry.voteCount?.toString() || '0'
+                    ]);
+
+                    autoTable(doc, {
+                        startY: yPosition,
+                        head: [['Rank', 'Nominee', 'Votes']],
+                        body: tableData,
+                        theme: 'grid',
+                        headStyles: { fillColor: [128, 0, 128], textColor: 255, fontSize: 9 },
+                        bodyStyles: { fontSize: 9 },
+                        columnStyles: {
+                            0: { cellWidth: 15, halign: 'center' },
+                            1: { cellWidth: 'auto' },
+                            2: { cellWidth: 25, halign: 'center' }
+                        },
+                        margin: { left: 14, right: 14 }
+                    });
+
+                    // Get final Y position after table
+                    yPosition = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15;
+                } else {
+                    doc.setFontSize(9);
+                    doc.setTextColor(150, 150, 150);
+                    doc.text('No votes in this category', 14, yPosition + 5);
+                    yPosition += 20;
+                }
+            });
+
+            // Save the PDF
+            doc.save(`Award_Winners_${new Date().toISOString().split('T')[0]}.pdf`);
+        } catch (error) {
+            console.error('Failed to generate PDF:', error);
+        } finally {
+            setGeneratingPdf(false);
         }
     };
 
@@ -833,6 +918,14 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                                     Updated {lastRefresh.toLocaleTimeString()}
                                 </span>
                             )}
+                            <button
+                                onClick={downloadWinnersPDF}
+                                disabled={generatingPdf || results.length === 0}
+                                className="flex items-center gap-1.5 text-xs bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
+                            >
+                                {generatingPdf ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                                {generatingPdf ? 'Generating...' : 'Download PDF'}
+                            </button>
                         </div>
                     </div>
                 </div>
