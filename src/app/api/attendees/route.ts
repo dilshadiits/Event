@@ -1,5 +1,5 @@
 import dbConnect from '@/lib/mongodb';
-import { Attendee, InviteCode } from '@/models';
+import { Attendee, InviteCode, Event } from '@/models';
 import { createAttendeeSchema, updateAttendeeSchema, sanitizeString, isValidObjectId } from '@/lib/validate';
 import { errorResponse, successResponse, checkRateLimit, getClientIP } from '@/lib/api-utils';
 
@@ -112,13 +112,22 @@ export async function POST(req: Request) {
             return errorResponse(message, 400);
         }
 
-        const { name, email, phone, additionalName, seatingNumber, instagram, youtube, category, guest_names, meal_preference, eventId, inviteCode } = result.data;
+        const { name, email, phone, additionalName, instagram, youtube, category, guest_names, meal_preference, eventId, inviteCode } = result.data;
 
         if (!isValidObjectId(eventId)) {
             return errorResponse('Invalid Event ID format', 400);
         }
 
         await dbConnect();
+
+        // Check if registration is open for this event
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return errorResponse('Event not found', 404);
+        }
+        if (event.registrationOpen === false) {
+            return errorResponse('Registration is closed for this event', 403);
+        }
 
         // Validate Invite Code (if provided)
         if (inviteCode) {
@@ -217,7 +226,7 @@ export async function PUT(req: Request) {
             return errorResponse(message, 400);
         }
 
-        const { id, name, additionalName, seatingNumber, email, phone, instagram, youtube, category, guest_names, meal_preference } = result.data;
+        const { id, name, additionalName, email, phone, instagram, youtube, category, guest_names, meal_preference } = result.data;
 
         if (!isValidObjectId(id)) {
             return errorResponse('Invalid Attendee ID format', 400);

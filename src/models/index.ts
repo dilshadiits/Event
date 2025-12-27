@@ -3,6 +3,7 @@ import mongoose, { Schema } from 'mongoose';
 const EventSchema = new Schema({
     name: { type: String, required: true },
     date: { type: String, required: true },
+    registrationOpen: { type: Boolean, default: true },
     created_at: { type: Date, default: Date.now },
 });
 

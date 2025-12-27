@@ -12,6 +12,7 @@ export async function GET() {
             id: e._id.toString(),
             name: e.name,
             date: e.date,
+            registrationOpen: e.registrationOpen ?? true,
             created_at: e.created_at
         }));
 
@@ -81,5 +82,81 @@ export async function DELETE(req: Request) {
     } catch (error) {
         console.error('[Events DELETE]', error);
         return errorResponse('Failed to delete event');
+    }
+}
+
+// Helper to get category priority for sorting
+const getCategoryPriority = (category?: string): number => {
+    switch (category) {
+        case '1m plus': return 1;
+        case '500k to 1m': return 2;
+        case '100k to 500k': return 3;
+        case '10k to 100k': return 4;
+        case '5k to 10k': return 5;
+        case 'Guest': return 6;
+        default: return 7;
+    }
+};
+
+export async function PUT(req: Request) {
+    try {
+        const body = await req.json();
+        const { id, registrationOpen } = body;
+
+        if (!id) {
+            return errorResponse('Event ID required', 400);
+        }
+
+        if (!isValidObjectId(id)) {
+            return errorResponse('Invalid Event ID format', 400);
+        }
+
+        await dbConnect();
+
+        const event = await Event.findById(id);
+        if (!event) {
+            return errorResponse('Event not found', 404);
+        }
+
+        // If stopping registration, finalize seats in order
+        if (registrationOpen === false && event.registrationOpen !== false) {
+            // Get all attendees for this event
+            const attendees = await Attendee.find({ eventId: id }).lean();
+
+            // Sort by category priority
+            const sorted = [...attendees].sort((a, b) =>
+                getCategoryPriority(a.category as string) - getCategoryPriority(b.category as string)
+            );
+
+            // Reassign seats sequentially (1, 2, 3, ...)
+            for (let i = 0; i < sorted.length; i++) {
+                const attendee = sorted[i];
+                // Skip guests - they don't get seats
+                if (attendee.category === 'Guest') {
+                    await Attendee.findByIdAndUpdate(attendee._id, {
+                        $unset: { seatingNumber: 1 }
+                    });
+                } else {
+                    await Attendee.findByIdAndUpdate(attendee._id, {
+                        seatingNumber: (i + 1).toString()
+                    });
+                }
+            }
+        }
+
+        // Update registration status
+        event.registrationOpen = registrationOpen;
+        await event.save();
+
+        return successResponse({
+            id: event._id.toString(),
+            name: event.name,
+            date: event.date,
+            registrationOpen: event.registrationOpen,
+            message: registrationOpen ? 'Registration opened' : 'Registration closed and seats finalized'
+        });
+    } catch (error) {
+        console.error('[Events PUT]', error);
+        return errorResponse('Failed to update event');
     }
 }

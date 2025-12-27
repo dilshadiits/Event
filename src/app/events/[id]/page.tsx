@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, use, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Search, QrCode, CheckCircle, Instagram, Phone, Users, Link as LinkIcon, Check, Trash2, Zap, RefreshCw, Edit, Download, Loader2 } from 'lucide-react';
+import { ArrowLeft, Search, QrCode, CheckCircle, Instagram, Phone, Users, Link as LinkIcon, Check, Trash2, Zap, RefreshCw, Edit, Download, Loader2, SortDesc, Play, Square } from 'lucide-react';
 import QRCodeModal from '@/components/QRCodeModal';
 import EditAttendeeModal from '@/components/EditAttendeeModal';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -35,6 +35,9 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
     const [search, setSearch] = useState('');
     const [copied, setCopied] = useState(false);
     const [inviteCopied, setInviteCopied] = useState(false);
+    const [sortBy, setSortBy] = useState<string>('default');
+    const [registrationOpen, setRegistrationOpen] = useState(true);
+    const [togglingRegistration, setTogglingRegistration] = useState(false);
 
     // Modal State
     const [selectedAttendee, setSelectedAttendee] = useState<Attendee | null>(null);
@@ -75,37 +78,47 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const downloadAttendeesPDF = () => {
-        if (attendees.length === 0) return;
-        setGeneratingPdf(true);
+    // Fetch registration status
+    const fetchRegistrationStatus = useCallback(async () => {
         try {
-            const doc = new jsPDF();
-            doc.setFontSize(18);
-            doc.text('Event Attendees', 14, 20);
-            doc.setFontSize(10);
-            doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 26);
+            const res = await fetch('/api/events');
+            const events = await res.json();
+            const event = events.find((e: { id: string }) => e.id === id);
+            if (event) {
+                setRegistrationOpen(event.registrationOpen ?? true);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }, [id]);
 
-            const tableData = attendees.map((a, i) => [
-                (i + 1).toString(),
-                a.name + (a.additionalName ? `\n(${a.additionalName})` : ''),
-                a.category || '-',
-                a.guest_names || '-',
-                a.phone || '-',
-                a.status
-            ]);
+    useEffect(() => {
+        fetchRegistrationStatus();
+    }, [fetchRegistrationStatus]);
 
-            autoTable(doc, {
-                startY: 32,
-                head: [['#', 'Name', 'Category', 'Guests', 'Phone', 'Status']],
-                body: tableData,
-                headStyles: { fillColor: [66, 66, 66] },
-                styles: { fontSize: 9 },
+    const toggleRegistration = async () => {
+        if (!confirm(registrationOpen
+            ? 'Stop registration? This will finalize all seat numbers in order.'
+            : 'Start registration again?')) return;
+
+        setTogglingRegistration(true);
+        try {
+            const res = await fetch('/api/events', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, registrationOpen: !registrationOpen })
             });
-            doc.save('attendees.pdf');
+            if (res.ok) {
+                setRegistrationOpen(!registrationOpen);
+                if (registrationOpen) {
+                    // Was open, now closed - refresh attendees to see new seat numbers
+                    fetchAttendees(true);
+                }
+            }
         } catch (err) {
             console.error(err);
         } finally {
-            setGeneratingPdf(false);
+            setTogglingRegistration(false);
         }
     };
 
@@ -246,11 +259,78 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
     };
 
 
-    const filtered = attendees.filter(a =>
-        a.name.toLowerCase().includes(search.toLowerCase()) ||
-        (a.category && a.category.toLowerCase().includes(search.toLowerCase()))
-    );
+    // Category priority for sorting (higher priority = lower number)
+    const getCategoryPriority = (category?: string): number => {
+        switch (category) {
+            case '1m plus': return 1;
+            case '500k to 1m': return 2;
+            case '100k to 500k': return 3;
+            case '10k to 100k': return 4;
+            case '5k to 10k': return 5;
+            case 'Guest': return 6;
+            default: return 7; // No category or unknown
+        }
+    };
+
+    const filtered = attendees
+        .filter(a =>
+            a.name.toLowerCase().includes(search.toLowerCase()) ||
+            (a.category && a.category.toLowerCase().includes(search.toLowerCase()))
+        )
+        .filter(a => {
+            if (sortBy === 'default' || sortBy === 'all') return true;
+            return a.category === sortBy;
+        })
+        .sort((a, b) => {
+            if (sortBy === 'default') return 0; // Keep original order
+            // Sort by category priority
+            return getCategoryPriority(a.category) - getCategoryPriority(b.category);
+        });
     const checkedInCount = attendees.filter(a => a.status === 'checked-in').length;
+
+    const downloadAttendeesPDF = () => {
+        if (filtered.length === 0) return;
+        setGeneratingPdf(true);
+        try {
+            const doc = new jsPDF();
+            doc.setFontSize(18);
+
+            // Title based on current filter
+            const filterTitle = sortBy === 'default' ? 'All Attendees' :
+                sortBy === 'all' ? 'Attendees (Sorted by Priority)' :
+                    `Attendees - ${sortBy}`;
+            doc.text(filterTitle, 14, 20);
+            doc.setFontSize(10);
+            doc.text(`Generated: ${new Date().toLocaleString()} | Count: ${filtered.length}`, 14, 26);
+
+            const tableData = filtered.map((a, i) => [
+                (i + 1).toString(),
+                a.name + (a.additionalName ? `\n(${a.additionalName})` : ''),
+                a.category || '-',
+                a.guest_names || '-',
+                a.phone || '-',
+                a.status
+            ]);
+
+            autoTable(doc, {
+                startY: 32,
+                head: [['#', 'Name', 'Category', 'Guests', 'Phone', 'Status']],
+                body: tableData,
+                headStyles: { fillColor: [66, 66, 66] },
+                styles: { fontSize: 9 },
+            });
+
+            // Filename based on filter
+            const filename = sortBy === 'default' ? 'attendees.pdf' :
+                sortBy === 'all' ? 'attendees_sorted.pdf' :
+                    `attendees_${sortBy.replace(/\s+/g, '_')}.pdf`;
+            doc.save(filename);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setGeneratingPdf(false);
+        }
+    };
 
     return (
         <main className="min-h-screen p-4 md:p-8 max-w-6xl mx-auto space-y-6 md:space-y-8">
@@ -327,6 +407,23 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                         )}
                         PDF
                     </button>
+                    <button
+                        onClick={toggleRegistration}
+                        disabled={togglingRegistration}
+                        className={`flex items-center gap-2 ${registrationOpen
+                            ? 'bg-red-600/20 hover:bg-red-600/40 text-red-400 border-red-500/30'
+                            : 'bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border-emerald-500/30'
+                            } text-xs px-3 py-2 rounded-full transition-all border disabled:opacity-50`}
+                    >
+                        {togglingRegistration ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : registrationOpen ? (
+                            <Square className="w-3 h-3" />
+                        ) : (
+                            <Play className="w-3 h-3" />
+                        )}
+                        {registrationOpen ? 'Stop Reg.' : 'Start Reg.'}
+                    </button>
                 </div>
 
                 {/* Stats */}
@@ -355,15 +452,34 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
             </div>
 
             <div className="space-y-6">
-                <div className="relative">
-                    <Search className="absolute left-4 top-3.5 w-5 h-5 text-muted-foreground" />
-                    <input
-                        type="text"
-                        placeholder="Search influencers by name or category..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full bg-muted/50 border border-border rounded-xl pl-12 pr-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-4 top-3.5 w-5 h-5 text-muted-foreground" />
+                        <input
+                            type="text"
+                            placeholder="Search influencers by name or category..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-full bg-muted/50 border border-border rounded-xl pl-12 pr-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                    </div>
+                    <div className="relative">
+                        <SortDesc className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className="w-full sm:w-auto bg-muted/50 border border-border rounded-xl pl-10 pr-8 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer"
+                        >
+                            <option value="default" className="bg-black">All Categories</option>
+                            <option value="all" className="bg-black">Sort by Priority</option>
+                            <option value="1m plus" className="bg-black">1M+ Followers</option>
+                            <option value="500k to 1m" className="bg-black">500K - 1M</option>
+                            <option value="100k to 500k" className="bg-black">100K - 500K</option>
+                            <option value="10k to 100k" className="bg-black">10K - 100K</option>
+                            <option value="5k to 10k" className="bg-black">5K - 10K</option>
+                            <option value="Guest" className="bg-black">Guest</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div className="bg-card border border-border rounded-xl overflow-hidden">
