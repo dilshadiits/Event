@@ -366,13 +366,12 @@ export default function SpotRegistrationPage({ params }: { params: Promise<{ id:
                                             className="w-full bg-muted/50 border border-border rounded-lg pl-9 pr-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-orange-500 outline-none appearance-none"
                                         >
                                             <option value="" className="bg-black">Select Category...</option>
-                                            <option value="Tech" className="bg-black">Tech</option>
-                                            <option value="Fashion" className="bg-black">Fashion</option>
-                                            <option value="Lifestyle" className="bg-black">Lifestyle</option>
-                                            <option value="Food" className="bg-black">Food</option>
-                                            <option value="Travel" className="bg-black">Travel</option>
-                                            <option value="Gaming" className="bg-black">Gaming</option>
-                                            <option value="Other" className="bg-black">Other</option>
+                                            <option value="1m plus" className="bg-black">1M+ Followers</option>
+                                            <option value="500k to 1m" className="bg-black">500K - 1M Followers</option>
+                                            <option value="100k to 500k" className="bg-black">100K - 500K Followers</option>
+                                            <option value="10k to 100k" className="bg-black">10K - 100K Followers</option>
+                                            <option value="5k to 10k" className="bg-black">5K - 10K Followers</option>
+                                            <option value="Guest" className="bg-black">Guest (No Seat)</option>
                                         </select>
                                     </div>
                                 </div>

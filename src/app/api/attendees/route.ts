@@ -21,6 +21,9 @@ const allocateSeat = async (eventId: string, category: string): Promise<string |
     const range = getCategoryRange(category);
     if (!range) return undefined;
 
+    // Get total attendees count to ensure seat number doesn't exceed it
+    const totalAttendees = await Attendee.countDocuments({ eventId });
+
     // Find all occupied seats for this event
     const attendees = await Attendee.find({
         eventId,
@@ -43,6 +46,8 @@ const allocateSeat = async (eventId: string, category: string): Promise<string |
         }
     }
 
+    // Ensure seat doesn't exceed total attendees + 1 (for the new attendee being added)
+    if (nextSeat > totalAttendees + 1) return undefined;
     if (nextSeat > range.end) return undefined; // Range full (unlikely but safe)
     return nextSeat.toString();
 };
@@ -128,7 +133,7 @@ export async function POST(req: Request) {
             }
         }
 
-        // Auto-assign seating if not provided and category exists
+        // Auto-assign seating based on category (no manual entry allowed)
         let autoSeating = undefined;
         if (category && category !== 'Guest') {
             autoSeating = await allocateSeat(eventId, category);
@@ -137,7 +142,7 @@ export async function POST(req: Request) {
         const newAttendee = await Attendee.create({
             name: sanitizeString(name),
             additionalName: additionalName ? sanitizeString(additionalName) : undefined,
-            seatingNumber: seatingNumber || autoSeating,
+            seatingNumber: autoSeating, // Always use automatic allocation
             email: email || undefined,
             phone: phone?.trim() || undefined,
             instagram: instagram ? sanitizeString(instagram) : undefined,
@@ -218,17 +223,17 @@ export async function PUT(req: Request) {
             return errorResponse('Invalid Attendee ID format', 400);
         }
 
+        await dbConnect();
+
         // Fetch current attendee first to get eventId for allocation if needed
         const currentAttendee = await Attendee.findById(id);
         if (!currentAttendee) return errorResponse('Attendee not found', 404);
-
-        await dbConnect();
 
         // Build update object with only provided fields
         const updateData: Record<string, unknown> = {};
         if (name !== undefined) updateData.name = sanitizeString(name);
         if (additionalName !== undefined) updateData.additionalName = additionalName ? sanitizeString(additionalName) : undefined;
-        if (seatingNumber !== undefined) updateData.seatingNumber = seatingNumber ? sanitizeString(seatingNumber) : undefined;
+        // Seat number is auto-assigned only, no manual updates allowed
         if (email !== undefined) updateData.email = email || undefined;
         if (phone !== undefined) updateData.phone = phone?.trim() || undefined;
         if (instagram !== undefined) updateData.instagram = instagram ? sanitizeString(instagram) : undefined;
@@ -237,32 +242,15 @@ export async function PUT(req: Request) {
             const newCategory = category ? sanitizeString(category) : undefined;
             updateData.category = newCategory;
 
-            // Re-evaluate seating if category changes
+            // Re-evaluate seating if category changes (always auto-allocate)
             if (newCategory === 'Guest') {
                 updateData.seatingNumber = undefined;
                 updateData['$unset'] = { seatingNumber: 1 };
             } else if (newCategory) {
-                // Determine if we should auto-allocate a new seat
-                let shouldAllocate = false;
-
-                const passedSeat = seatingNumber ? sanitizeString(seatingNumber) : undefined;
-                // If passedSeat is empty/undefined, user didn't specify a new seat -> Allocate
-                // If passedSeat is same as current, user didn't change it -> Allocate for new category
-                if (!passedSeat || passedSeat === currentAttendee.seatingNumber) {
-                    shouldAllocate = true;
-                } else {
-                    // User explicitly typed a DIFFERENT seat -> Respect it
-                    updateData.seatingNumber = passedSeat;
-                }
-
-                if (shouldAllocate) {
-                    const newSeat = await allocateSeat(currentAttendee?.eventId.toString() || '', newCategory);
-                    if (newSeat) updateData.seatingNumber = newSeat;
-                }
+                // Always auto-allocate a new seat when category changes
+                const newSeat = await allocateSeat(currentAttendee?.eventId.toString() || '', newCategory);
+                if (newSeat) updateData.seatingNumber = newSeat;
             }
-        } else {
-            // Category not changing, standard update for seat
-            if (seatingNumber !== undefined) updateData.seatingNumber = seatingNumber ? sanitizeString(seatingNumber) : undefined;
         }
         if (guest_names !== undefined) updateData.guest_names = guest_names ? sanitizeString(guest_names) : undefined;
         if (meal_preference !== undefined) updateData.meal_preference = meal_preference;
