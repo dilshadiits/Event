@@ -27,7 +27,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     const results = await Promise.all(categories.map(async (category) => {
         const votes = await Vote.aggregate([
             { $match: { categoryId: category._id } },
-            { $group: { _id: '$nomineeId', voteCount: { $sum: { $multiply: [{ $ifNull: ['$voteWeight', 1] }, 4] } } } },
+            { $group: { _id: '$nomineeId', voteCount: { $sum: { $multiply: [{ $ifNull: ['$voteWeight', 1] }, 10] } } } },
             { $sort: { voteCount: -1 } },
             { $limit: 10 }
         ]);
