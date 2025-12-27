@@ -117,3 +117,48 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
 
     return successResponse({ success: true });
 });
+
+// PATCH /api/categories - Bulk update all categories for an event
+export const PATCH = withErrorHandler(async (req: NextRequest) => {
+    const body = await req.json();
+    const { eventId, action } = body;
+
+    if (!eventId || !isValidObjectId(eventId)) {
+        return errorResponse('Valid event ID is required', 400);
+    }
+
+    const validActions = ['publishAll', 'hideAll', 'stopAll', 'startAll'];
+    if (!action || !validActions.includes(action)) {
+        return errorResponse(`Invalid action. Must be one of: ${validActions.join(', ')}`, 400);
+    }
+
+    await connectDB();
+
+    // Determine what to update based on action
+    let updateData: Record<string, boolean> = {};
+    switch (action) {
+        case 'publishAll':
+            updateData = { showResults: true };
+            break;
+        case 'hideAll':
+            updateData = { showResults: false };
+            break;
+        case 'stopAll':
+            updateData = { isActive: false };
+            break;
+        case 'startAll':
+            updateData = { isActive: true };
+            break;
+    }
+
+    const result = await AwardCategory.updateMany(
+        { eventId },
+        { $set: updateData }
+    );
+
+    return successResponse({
+        success: true,
+        modifiedCount: result.modifiedCount,
+        action
+    });
+});

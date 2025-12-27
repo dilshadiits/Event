@@ -76,6 +76,7 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
 
     const [copied, setCopied] = useState(false);
     const [updating, setUpdating] = useState<string | null>(null);
+    const [bulkUpdating, setBulkUpdating] = useState<string | null>(null);
 
     // Live results
     const [results, setResults] = useState<VoteResult[]>([]);
@@ -190,6 +191,23 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
             console.error(err);
         } finally {
             setUpdating(null);
+        }
+    };
+
+    // Bulk actions for all categories
+    const bulkUpdateCategories = async (action: 'publishAll' | 'hideAll' | 'stopAll' | 'startAll') => {
+        setBulkUpdating(action);
+        try {
+            await fetch('/api/categories', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ eventId: id, action })
+            });
+            fetchData();
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setBulkUpdating(null);
         }
     };
 
@@ -568,10 +586,30 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                 {/* Categories Section */}
                 <section className="bg-card border border-border rounded-xl overflow-hidden">
                     <div className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 p-4 border-b border-border">
-                        <h2 className="font-bold text-white flex items-center gap-2">
-                            <Award className="w-5 h-5 text-purple-400" />
-                            Award Categories
-                        </h2>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <h2 className="font-bold text-white flex items-center gap-2">
+                                <Award className="w-5 h-5 text-purple-400" />
+                                Award Categories
+                            </h2>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => bulkUpdateCategories('stopAll')}
+                                    disabled={bulkUpdating !== null || categories.length === 0}
+                                    className="flex items-center gap-1.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-400 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                                >
+                                    {bulkUpdating === 'stopAll' ? <Loader2 className="w-3 h-3 animate-spin" /> : <EyeOff className="w-3 h-3" />}
+                                    Stop All Voting
+                                </button>
+                                <button
+                                    onClick={() => bulkUpdateCategories('publishAll')}
+                                    disabled={bulkUpdating !== null || categories.length === 0}
+                                    className="flex items-center gap-1.5 bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 text-green-400 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                                >
+                                    {bulkUpdating === 'publishAll' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Eye className="w-3 h-3" />}
+                                    Publish All Results
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Add Category Form */}
