@@ -12,6 +12,7 @@ interface Attendee {
     id: string;
     name: string;
     additionalName?: string;
+    seatingNumber?: string;
     email: string;
     phone: string;
     instagram?: string;
@@ -306,6 +307,7 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
             const tableData = filtered.map((a, i) => [
                 (i + 1).toString(),
                 a.name + (a.additionalName ? `\n(${a.additionalName})` : ''),
+                a.seatingNumber || '-',
                 a.category || '-',
                 a.guest_names || '-',
                 a.phone || '-',
@@ -314,7 +316,7 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
 
             autoTable(doc, {
                 startY: 32,
-                head: [['#', 'Name', 'Category', 'Guests', 'Phone', 'Status']],
+                head: [['#', 'Name', 'Seat #', 'Category', 'Guests', 'Phone', 'Status']],
                 body: tableData,
                 headStyles: { fillColor: [66, 66, 66] },
                 styles: { fontSize: 9 },
