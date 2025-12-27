@@ -27,10 +27,21 @@ interface Nominee {
 interface Recipient {
     id: string;
     name: string;
+    additionalName?: string;
+    category?: string;
     followerCount: number;
     token: string;
     status: string;
 }
+
+const FOLLOWER_CATEGORIES = [
+    '5k to 10k',
+    '10k to 100k',
+    '100k to 500k',
+    '500k to 1m',
+    '1m plus',
+    'Guest'
+];
 
 interface VoteResult {
     categoryId: string;
@@ -50,6 +61,15 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
     const [categories, setCategories] = useState<Category[]>([]);
     const [nominees, setNominees] = useState<Nominee[]>([]);
     const [recipients, setRecipients] = useState<Recipient[]>([]);
+    // Recipients
+    const [uploadingRecipients, setUploadingRecipients] = useState(false);
+    const [recipientFile, setRecipientFile] = useState<File | null>(null);
+    const [editingRecipient, setEditingRecipient] = useState<Recipient | null>(null);
+    const [editRecipientName, setEditRecipientName] = useState('');
+    const [editRecipientAdditionalName, setEditRecipientAdditionalName] = useState('');
+    const [editRecipientCategory, setEditRecipientCategory] = useState('');
+    const [editRecipientFollowerCount, setEditRecipientFollowerCount] = useState(0);
+    const [savingRecipient, setSavingRecipient] = useState(false);
     const [loading, setLoading] = useState(true);
 
     // Category form
@@ -89,9 +109,7 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
     const [updating, setUpdating] = useState<string | null>(null);
     const [bulkUpdating, setBulkUpdating] = useState<string | null>(null);
 
-    // Recipients
-    const [uploadingRecipients, setUploadingRecipients] = useState(false);
-    const [recipientFile, setRecipientFile] = useState<File | null>(null);
+
 
     // Live results
     const [results, setResults] = useState<VoteResult[]>([]);
@@ -562,6 +580,49 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
         }
     };
 
+    const openEditRecipient = (recipient: Recipient) => {
+        setEditingRecipient(recipient);
+        setEditRecipientName(recipient.name);
+        setEditRecipientAdditionalName(recipient.additionalName || '');
+        setEditRecipientCategory(recipient.category || '');
+        setEditRecipientFollowerCount(recipient.followerCount);
+    };
+
+    const saveEditedRecipient = async () => {
+        if (!editingRecipient || !editRecipientName.trim() || savingRecipient) return;
+
+        setSavingRecipient(true);
+        try {
+            const res = await fetch(`/api/awards/${id}/recipients`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    recipientId: editingRecipient.id,
+                    name: editRecipientName,
+                    additionalName: editRecipientAdditionalName,
+                    category: editRecipientCategory,
+                    followerCount: editRecipientFollowerCount
+                })
+            });
+
+            if (res.ok) {
+                setEditingRecipient(null);
+                fetchData();
+            } else {
+                const data = await res.json();
+                console.error('Failed to update recipient:', data.error);
+                alert(`Failed to update: ${data.error}`);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Failed to update recipient');
+        } finally {
+            setSavingRecipient(false);
+        }
+    };
+
+
+
     if (loading) {
         return (
             <main className="min-h-screen flex items-center justify-center">
@@ -725,7 +786,7 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                 <div className="flex flex-col md:flex-row gap-4 mb-6 items-end">
                     <div className="flex-1 space-y-2 w-full">
                         <label className="text-sm text-muted-foreground block">
-                            Upload Excel (Columns: "Name", "Follower Count")
+                            Upload Excel (Columns: &quot;Name&quot;, &quot;Follower Count&quot;, &quot;Ticket Number&quot;)
                         </label>
                         <input
                             type="file"
@@ -744,9 +805,11 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                         disabled={!recipientFile || uploadingRecipients}
                         className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all h-10"
                     >
-                        {uploadingRecipients ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Upload & Generate Tokens'}
+                        {uploadingRecipients ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Upload & Generate Tickets'}
                     </button>
                 </div>
+
+
 
                 {recipients.length > 0 && (
                     <div className="overflow-x-auto">
@@ -755,21 +818,45 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                                 <tr>
                                     <th className="px-4 py-3 rounded-tl-lg">Name</th>
                                     <th className="px-4 py-3">Followers</th>
+                                    <th className="px-4 py-3">Category</th>
                                     <th className="px-4 py-3">Token</th>
-                                    <th className="px-4 py-3 rounded-tr-lg">Status</th>
+                                    <th className="px-4 py-3">Status</th>
+                                    <th className="px-4 py-3 rounded-tr-lg">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {recipients.map((recipient) => (
                                     <tr key={recipient.id} className="bg-card border-b border-border hover:bg-muted/10">
-                                        <td className="px-4 py-3 font-medium text-white">{recipient.name}</td>
+                                        <td className="px-4 py-3">
+                                            <div className="font-medium text-white">{recipient.name}</div>
+                                            {recipient.additionalName && (
+                                                <div className="text-xs text-muted-foreground">{recipient.additionalName}</div>
+                                            )}
+                                        </td>
                                         <td className="px-4 py-3">{recipient.followerCount.toLocaleString()}</td>
+                                        <td className="px-4 py-3">
+                                            {recipient.category ? (
+                                                <span className="px-2 py-1 rounded-md bg-purple-500/10 text-purple-400 text-xs border border-purple-500/20">
+                                                    {recipient.category}
+                                                </span>
+                                            ) : (
+                                                <span className="text-muted-foreground text-xs">-</span>
+                                            )}
+                                        </td>
                                         <td className="px-4 py-3 font-mono text-purple-400">{recipient.token}</td>
                                         <td className="px-4 py-3">
                                             <span className={`px-2 py-1 rounded-full text-xs ${recipient.status === 'generated' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'
                                                 }`}>
                                                 {recipient.status}
                                             </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <button
+                                                onClick={() => openEditRecipient(recipient)}
+                                                className="p-1 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white"
+                                            >
+                                                <Edit2 className="w-4 h-4" />
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
@@ -778,6 +865,75 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                     </div>
                 )}
             </section>
+
+            {/* Edit Recipient Modal */}
+            {editingRecipient && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-card border border-border w-full max-w-md rounded-xl p-6 space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h3 className="text-lg font-bold text-white">Edit Recipient</h3>
+                            <button onClick={() => setEditingRecipient(null)} className="text-muted-foreground hover:text-white">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-muted-foreground">Name</label>
+                                <input
+                                    type="text"
+                                    value={editRecipientName}
+                                    onChange={(e) => setEditRecipientName(e.target.value)}
+                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-muted-foreground">Additional Name</label>
+                                <input
+                                    type="text"
+                                    value={editRecipientAdditionalName}
+                                    onChange={(e) => setEditRecipientAdditionalName(e.target.value)}
+                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                                    placeholder="e.g. Spouse, Partner"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-muted-foreground">Category</label>
+                                <select
+                                    value={editRecipientCategory}
+                                    onChange={(e) => setEditRecipientCategory(e.target.value)}
+                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                                >
+                                    <option value="">Select Category</option>
+                                    {FOLLOWER_CATEGORIES.map(cat => (
+                                        <option key={cat} value={cat}>{cat}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-muted-foreground">Follower Count</label>
+                                <input
+                                    type="number"
+                                    value={editRecipientFollowerCount}
+                                    onChange={(e) => setEditRecipientFollowerCount(Number(e.target.value))}
+                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                                />
+                            </div>
+
+                            <button
+                                onClick={saveEditedRecipient}
+                                disabled={savingRecipient || !editRecipientName.trim()}
+                                className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
+                            >
+                                {savingRecipient ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Categories Section */}
@@ -951,7 +1107,7 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                                     {/* Nominees in Category */}
                                     <div className="divide-y divide-border/30">
                                         {catNominees.map((nominee, index) => (
-                                            <div key={nominee.id} className="p-3 flex items-center gap-3 hover:bg-muted/30">
+                                            <div key={nominee.id} className="p-3 flex flex-wrap sm:flex-nowrap items-center gap-3 hover:bg-muted/30">
                                                 {/* Position Controls */}
                                                 <div className="flex flex-col gap-0.5">
                                                     <button
@@ -1109,7 +1265,7 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
             </section>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="bg-card border border-border rounded-xl p-4 text-center">
                     <div className="text-2xl font-bold text-white">{categories.length}</div>
                     <div className="text-xs text-muted-foreground">Categories</div>

@@ -14,6 +14,8 @@ const AttendeeSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, required: false },
     phone: { type: String, required: false, index: true },
+    additionalName: { type: String }, // For edit option
+    seatingNumber: { type: String }, // Assigned based on category
     instagram: { type: String },
     youtube: { type: String },
     category: { type: String },
@@ -114,6 +116,8 @@ const AwardRecipientSchema = new mongoose.Schema({
     name: { type: String, required: true },
     followerCount: { type: Number, default: 0 },
     token: { type: String, required: true, unique: true },
+    additionalName: { type: String },
+    category: { type: String },
     status: { type: String, default: 'generated' }, // generated, redeemed, etc.
     createdAt: { type: Date, default: Date.now },
 });

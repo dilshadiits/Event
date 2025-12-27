@@ -18,11 +18,12 @@ export function handleValidationError(error: ZodError<unknown>) {
 }
 
 // Wrap async handler with error handling
-// Wrap async handler with error handling
 export function withErrorHandler(
-    handler: (req: any, ...args: any[]) => Promise<NextResponse>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    handler: (req: Request, ...args: any[]) => Promise<NextResponse>
 ) {
-    return async (req: any, ...args: any[]): Promise<NextResponse> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return async (req: Request, ...args: any[]): Promise<NextResponse> => {
         try {
             return await handler(req, ...args);
         } catch (error) {

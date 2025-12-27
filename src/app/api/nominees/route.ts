@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+
 import connectDB from '@/lib/mongodb';
 import { Nominee, AwardCategory } from '@/models';
 import { errorResponse, successResponse, withErrorHandler } from '@/lib/api-utils';
@@ -31,9 +31,10 @@ const updatePositionsSchema = z.object({
 });
 
 // GET /api/nominees?awardEventId=xxx&categoryId=xxx
-export const GET = withErrorHandler(async (req: NextRequest) => {
-    const awardEventId = req.nextUrl.searchParams.get('awardEventId');
-    const categoryId = req.nextUrl.searchParams.get('categoryId');
+export const GET = withErrorHandler(async (req: Request) => {
+    const { searchParams } = new URL(req.url);
+    const awardEventId = searchParams.get('awardEventId');
+    const categoryId = searchParams.get('categoryId');
 
     if (!awardEventId || !isValidObjectId(awardEventId)) {
         return errorResponse('Valid award event ID is required', 400);
@@ -67,7 +68,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
 });
 
 // POST /api/nominees - Create new nominee
-export const POST = withErrorHandler(async (req: NextRequest) => {
+export const POST = withErrorHandler(async (req: Request) => {
     const body = await req.json();
     const validated = createNomineeSchema.parse(body);
 
@@ -101,7 +102,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 });
 
 // PUT /api/nominees - Update nominee
-export const PUT = withErrorHandler(async (req: NextRequest) => {
+export const PUT = withErrorHandler(async (req: Request) => {
     const body = await req.json();
     const validated = updateNomineeSchema.parse(body);
 
@@ -143,8 +144,9 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
 });
 
 // DELETE /api/nominees?id=xxx
-export const DELETE = withErrorHandler(async (req: NextRequest) => {
-    const id = req.nextUrl.searchParams.get('id');
+export const DELETE = withErrorHandler(async (req: Request) => {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
 
     if (!id || !isValidObjectId(id)) {
         return errorResponse('Valid nominee ID is required', 400);
@@ -162,7 +164,7 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
 });
 
 // PATCH /api/nominees - Bulk update positions
-export const PATCH = withErrorHandler(async (req: NextRequest) => {
+export const PATCH = withErrorHandler(async (req: Request) => {
     const body = await req.json();
     const validated = updatePositionsSchema.parse(body);
 

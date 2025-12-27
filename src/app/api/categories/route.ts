@@ -1,12 +1,13 @@
-import { NextRequest } from 'next/server';
+
 import connectDB from '@/lib/mongodb';
 import { AwardCategory, Event, AwardEvent } from '@/models';
 import { errorResponse, successResponse, withErrorHandler } from '@/lib/api-utils';
 import { createCategorySchema, updateCategorySchema, isValidObjectId } from '@/lib/validate';
 
 // GET /api/categories?eventId=xxx - Get all categories for an event
-export const GET = withErrorHandler(async (req: NextRequest) => {
-    const eventId = req.nextUrl.searchParams.get('eventId');
+export const GET = withErrorHandler(async (req: Request) => {
+    const { searchParams } = new URL(req.url);
+    const eventId = searchParams.get('eventId');
 
     if (!eventId || !isValidObjectId(eventId)) {
         return errorResponse('Valid event ID is required', 400);
@@ -30,7 +31,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
 });
 
 // POST /api/categories - Create new category
-export const POST = withErrorHandler(async (req: NextRequest) => {
+export const POST = withErrorHandler(async (req: Request) => {
     const body = await req.json();
     const validated = createCategorySchema.parse(body);
 
@@ -64,7 +65,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 });
 
 // PUT /api/categories - Update category
-export const PUT = withErrorHandler(async (req: NextRequest) => {
+export const PUT = withErrorHandler(async (req: Request) => {
     const body = await req.json();
     const validated = updateCategorySchema.parse(body);
 
@@ -100,8 +101,9 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
 });
 
 // DELETE /api/categories?id=xxx - Delete category
-export const DELETE = withErrorHandler(async (req: NextRequest) => {
-    const id = req.nextUrl.searchParams.get('id');
+export const DELETE = withErrorHandler(async (req: Request) => {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
 
     if (!id || !isValidObjectId(id)) {
         return errorResponse('Valid category ID is required', 400);
@@ -119,7 +121,7 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
 });
 
 // PATCH /api/categories - Bulk update all categories for an event
-export const PATCH = withErrorHandler(async (req: NextRequest) => {
+export const PATCH = withErrorHandler(async (req: Request) => {
     const body = await req.json();
     const { eventId, action } = body;
 

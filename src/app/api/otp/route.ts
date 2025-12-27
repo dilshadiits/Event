@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+
 import connectDB from '@/lib/mongodb';
 import { OTP } from '@/models';
 import { errorResponse, successResponse, withErrorHandler } from '@/lib/api-utils';
@@ -34,8 +34,9 @@ function isAdminPhone(phone: string): boolean {
 }
 
 // GET /api/otp?phone=xxx - Check if phone is admin (bypass OTP)
-export const GET = withErrorHandler(async (req: NextRequest) => {
-    const phoneParam = req.nextUrl.searchParams.get('phone');
+export const GET = withErrorHandler(async (req: Request) => {
+    const { searchParams } = new URL(req.url);
+    const phoneParam = searchParams.get('phone');
     if (!phoneParam) {
         return errorResponse('Phone number required', 400);
     }
@@ -52,7 +53,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
 });
 
 // POST /api/otp - Send OTP to phone number
-export const POST = withErrorHandler(async (req: NextRequest) => {
+export const POST = withErrorHandler(async (req: Request) => {
     const body = await req.json();
     const validated = sendOTPSchema.parse(body);
     const phone = normalizePhone(validated.phone);
@@ -134,7 +135,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 });
 
 // PUT /api/otp - Verify OTP
-export const PUT = withErrorHandler(async (req: NextRequest) => {
+export const PUT = withErrorHandler(async (req: Request) => {
     const body = await req.json();
     const validated = verifyOTPSchema.parse(body);
     const phone = normalizePhone(validated.phone);

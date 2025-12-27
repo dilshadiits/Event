@@ -5,6 +5,8 @@ import { X, Save, Plus, Loader2, Users } from 'lucide-react';
 interface Attendee {
     id: string;
     name: string;
+    additionalName?: string;
+    seatingNumber?: string;
     email: string;
     phone: string;
     instagram?: string;
@@ -27,6 +29,8 @@ interface EditAttendeeModalProps {
 export default function EditAttendeeModal({ attendee, isOpen, onClose, onSave }: EditAttendeeModalProps) {
     const [formData, setFormData] = useState({
         name: '',
+        additionalName: '',
+        seatingNumber: '',
         email: '',
         phone: '',
         instagram: '',
@@ -43,6 +47,8 @@ export default function EditAttendeeModal({ attendee, isOpen, onClose, onSave }:
         if (attendee) {
             setFormData({
                 name: attendee.name || '',
+                additionalName: attendee.additionalName || '',
+                seatingNumber: attendee.seatingNumber || '',
                 email: attendee.email || '',
                 phone: attendee.phone || '',
                 instagram: attendee.instagram || '',
@@ -135,6 +141,30 @@ export default function EditAttendeeModal({ attendee, isOpen, onClose, onSave }:
                         />
                     </div>
 
+                    {/* Additional Name */}
+                    <div>
+                        <label className="block text-sm text-muted-foreground mb-1">Additional Name</label>
+                        <input
+                            type="text"
+                            value={formData.additionalName}
+                            onChange={(e) => setFormData({ ...formData, additionalName: e.target.value })}
+                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                            placeholder="e.g. Spouse, Partner"
+                        />
+                    </div>
+
+                    {/* Seating Number */}
+                    <div>
+                        <label className="block text-sm text-muted-foreground mb-1">Seating Number</label>
+                        <input
+                            type="text"
+                            value={formData.seatingNumber}
+                            onChange={(e) => setFormData({ ...formData, seatingNumber: e.target.value })}
+                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                            placeholder="e.g. A-12"
+                        />
+                    </div>
+
                     {/* Phone */}
                     <div>
                         <label className="block text-sm text-muted-foreground mb-1">Phone</label>
@@ -182,12 +212,19 @@ export default function EditAttendeeModal({ attendee, isOpen, onClose, onSave }:
                     {/* Category */}
                     <div>
                         <label className="block text-sm text-muted-foreground mb-1">Category</label>
-                        <input
-                            type="text"
+                        <select
                             value={formData.category}
                             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                             className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                        />
+                        >
+                            <option value="">Select Category</option>
+                            <option value="5k to 10k">5k to 10k</option>
+                            <option value="10k to 100k">10k to 100k</option>
+                            <option value="100k to 500k">100k to 500k</option>
+                            <option value="500k to 1m">500k to 1m</option>
+                            <option value="1m plus">1m plus</option>
+                            <option value="Guest">Guest</option>
+                        </select>
                     </div>
 
                     {/* Meal Preference */}

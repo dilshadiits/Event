@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+
 import connectDB from '@/lib/mongodb';
 import { Vote, AwardCategory, Nominee } from '@/models';
 import { errorResponse, successResponse, withErrorHandler } from '@/lib/api-utils';
@@ -15,9 +15,10 @@ const submitAwardVoteSchema = z.object({
 
 // GET /api/award-votes?awardEventId=xxx - Get vote results for standalone award event
 // Add &admin=true to always get full results regardless of showResults setting
-export const GET = withErrorHandler(async (req: NextRequest) => {
-    const awardEventId = req.nextUrl.searchParams.get('awardEventId');
-    const isAdmin = req.nextUrl.searchParams.get('admin') === 'true';
+export const GET = withErrorHandler(async (req: Request) => {
+    const { searchParams } = new URL(req.url);
+    const awardEventId = searchParams.get('awardEventId');
+    const isAdmin = searchParams.get('admin') === 'true';
 
     if (!awardEventId || !isValidObjectId(awardEventId)) {
         return errorResponse('Valid award event ID is required', 400);
@@ -66,7 +67,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
 });
 
 // POST /api/award-votes - Submit a vote for standalone award
-export const POST = withErrorHandler(async (req: NextRequest) => {
+export const POST = withErrorHandler(async (req: Request) => {
     const body = await req.json();
     const validated = submitAwardVoteSchema.parse(body);
 

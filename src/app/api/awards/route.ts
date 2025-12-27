@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+
 import connectDB from '@/lib/mongodb';
 import { AwardEvent } from '@/models';
 import { errorResponse, successResponse, withErrorHandler } from '@/lib/api-utils';
@@ -34,7 +34,7 @@ export const GET = withErrorHandler(async () => {
 });
 
 // POST /api/awards - Create new award event
-export const POST = withErrorHandler(async (req: NextRequest) => {
+export const POST = withErrorHandler(async (req: Request) => {
     const body = await req.json();
     const validated = createAwardEventSchema.parse(body);
 
@@ -60,7 +60,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 });
 
 // PUT /api/awards - Update award event
-export const PUT = withErrorHandler(async (req: NextRequest) => {
+export const PUT = withErrorHandler(async (req: Request) => {
     const body = await req.json();
     const { id, ...updateData } = body;
 
@@ -101,8 +101,9 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
 });
 
 // DELETE /api/awards?id=xxx - Delete award event
-export const DELETE = withErrorHandler(async (req: NextRequest) => {
-    const id = req.nextUrl.searchParams.get('id');
+export const DELETE = withErrorHandler(async (req: Request) => {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
 
     if (!id || !isValidObjectId(id)) {
         return errorResponse('Valid event ID is required', 400);

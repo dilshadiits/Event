@@ -5,10 +5,13 @@ import { ArrowLeft, Search, QrCode, CheckCircle, Instagram, Phone, Users, Link a
 import QRCodeModal from '@/components/QRCodeModal';
 import EditAttendeeModal from '@/components/EditAttendeeModal';
 import { QRCodeCanvas } from 'qrcode.react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Attendee {
     id: string;
     name: string;
+    additionalName?: string;
     email: string;
     phone: string;
     instagram?: string;
@@ -24,6 +27,7 @@ interface Attendee {
 export default function EventPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const [attendees, setAttendees] = useState<Attendee[]>([]);
+    const [generatingPdf, setGeneratingPdf] = useState(false);
     const eventName = 'Event Details';
     const [loading, setLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -69,6 +73,40 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
         navigator.clipboard.writeText(url);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const downloadAttendeesPDF = () => {
+        if (attendees.length === 0) return;
+        setGeneratingPdf(true);
+        try {
+            const doc = new jsPDF();
+            doc.setFontSize(18);
+            doc.text('Event Attendees', 14, 20);
+            doc.setFontSize(10);
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 26);
+
+            const tableData = attendees.map((a, i) => [
+                (i + 1).toString(),
+                a.name + (a.additionalName ? `\n(${a.additionalName})` : ''),
+                a.category || '-',
+                a.guest_names || '-',
+                a.phone || '-',
+                a.status
+            ]);
+
+            autoTable(doc, {
+                startY: 32,
+                head: [['#', 'Name', 'Category', 'Guests', 'Phone', 'Status']],
+                body: tableData,
+                headStyles: { fillColor: [66, 66, 66] },
+                styles: { fontSize: 9 },
+            });
+            doc.save('attendees.pdf');
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setGeneratingPdf(false);
+        }
     };
 
     const generateInviteLink = async () => {
@@ -277,10 +315,22 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                             </>
                         )}
                     </button>
+                    <button
+                        onClick={downloadAttendeesPDF}
+                        disabled={generatingPdf || attendees.length === 0}
+                        className="flex items-center gap-2 bg-pink-600/20 hover:bg-pink-600/40 disabled:opacity-50 text-pink-400 text-xs px-3 py-2 rounded-full transition-all border border-pink-500/30"
+                    >
+                        {generatingPdf ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                            <Download className="w-3 h-3" />
+                        )}
+                        PDF
+                    </button>
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-3 gap-3 md:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
                     <div className="bg-card border border-border px-4 py-3 rounded-xl text-center">
                         <div className="text-xs text-muted-foreground">Total</div>
                         <div className="text-xl md:text-2xl font-bold text-white">{attendees.length}</div>
@@ -334,6 +384,9 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                                         <div>
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <h4 className="font-bold text-white text-lg">{attendee.name}</h4>
+                                                {attendee.additionalName && (
+                                                    <span className="text-sm text-muted-foreground mr-1">({attendee.additionalName})</span>
+                                                )}
                                                 {attendee.category && (
                                                     <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/30">
                                                         {attendee.category}

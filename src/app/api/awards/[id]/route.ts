@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import { AwardEvent } from '@/models';
 import { isValidObjectId } from '@/lib/validate';
 
 // GET /api/awards/[id] - Get single award event by ID
 export async function GET(
-    req: NextRequest,
+    req: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
@@ -41,7 +41,7 @@ export async function GET(
 
 // PUT /api/awards/[id] - Update award event (branding)
 export async function PUT(
-    req: NextRequest,
+    req: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {

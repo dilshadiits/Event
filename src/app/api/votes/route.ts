@@ -1,13 +1,14 @@
-import { NextRequest } from 'next/server';
+
 import connectDB from '@/lib/mongodb';
 import { Vote, AwardCategory, Attendee } from '@/models';
 import { errorResponse, successResponse, withErrorHandler } from '@/lib/api-utils';
 import { submitVoteSchema, isValidObjectId } from '@/lib/validate';
 
 // GET /api/votes?eventId=xxx - Get vote results for all categories in an event
-export const GET = withErrorHandler(async (req: NextRequest) => {
-    const eventId = req.nextUrl.searchParams.get('eventId');
-    const categoryId = req.nextUrl.searchParams.get('categoryId');
+export const GET = withErrorHandler(async (req: Request) => {
+    const { searchParams } = new URL(req.url);
+    const eventId = searchParams.get('eventId');
+    const categoryId = searchParams.get('categoryId');
 
     if (!eventId || !isValidObjectId(eventId)) {
         return errorResponse('Valid event ID is required', 400);
@@ -62,7 +63,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
 });
 
 // POST /api/votes - Submit a vote
-export const POST = withErrorHandler(async (req: NextRequest) => {
+export const POST = withErrorHandler(async (req: Request) => {
     const body = await req.json();
     const validated = submitVoteSchema.parse(body);
 

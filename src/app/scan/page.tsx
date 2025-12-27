@@ -9,6 +9,7 @@ import clsx from 'clsx';
 interface AttendeeData {
     name: string;
     email?: string;
+    seatingNumber?: string;
     guest_names?: string;
 }
 
@@ -108,6 +109,11 @@ function ScanContent() {
                             <div className="bg-black/20 rounded-xl p-6 mb-8 backdrop-blur-sm border border-white/10">
                                 <div className="text-sm text-white/50 uppercase tracking-wider font-bold mb-1">Attendee</div>
                                 <div className="text-2xl text-white font-bold">{scanResult.attendee.name}</div>
+                                {scanResult.attendee.seatingNumber && (
+                                    <div className="text-xl text-yellow-400 font-bold mt-1">
+                                        Seat: {scanResult.attendee.seatingNumber}
+                                    </div>
+                                )}
                                 <div className="text-white/70">{scanResult.attendee.email}</div>
                                 {scanResult.attendee.guest_names && <div className="text-white/70 mt-2 text-sm">Guest: {scanResult.attendee.guest_names}</div>}
                             </div>
