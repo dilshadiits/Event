@@ -105,4 +105,17 @@ const OTPSchema = new mongoose.Schema({
 // Auto-delete expired OTPs (TTL index)
 OTPSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
+
 export const OTP = mongoose.models.OTP || mongoose.model('OTP', OTPSchema);
+
+// Award Recipient Schema - for Excel upload and token generation
+const AwardRecipientSchema = new mongoose.Schema({
+    awardEventId: { type: mongoose.Schema.Types.ObjectId, ref: 'AwardEvent', required: true, index: true },
+    name: { type: String, required: true },
+    followerCount: { type: Number, default: 0 },
+    token: { type: String, required: true, unique: true },
+    status: { type: String, default: 'generated' }, // generated, redeemed, etc.
+    createdAt: { type: Date, default: Date.now },
+});
+
+export const AwardRecipient = mongoose.models.AwardRecipient || mongoose.model('AwardRecipient', AwardRecipientSchema);

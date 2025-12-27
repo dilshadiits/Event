@@ -18,12 +18,13 @@ export function handleValidationError(error: ZodError<unknown>) {
 }
 
 // Wrap async handler with error handling
-export function withErrorHandler<T extends Request>(
-    handler: (req: T) => Promise<NextResponse>
+// Wrap async handler with error handling
+export function withErrorHandler(
+    handler: (req: any, ...args: any[]) => Promise<NextResponse>
 ) {
-    return async (req: T): Promise<NextResponse> => {
+    return async (req: any, ...args: any[]): Promise<NextResponse> => {
         try {
-            return await handler(req);
+            return await handler(req, ...args);
         } catch (error) {
             console.error('[API Error]', error);
 

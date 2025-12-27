@@ -24,6 +24,14 @@ interface Nominee {
     position: number;
 }
 
+interface Recipient {
+    id: string;
+    name: string;
+    followerCount: number;
+    token: string;
+    status: string;
+}
+
 interface VoteResult {
     categoryId: string;
     categoryName: string;
@@ -41,6 +49,7 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
 
     const [categories, setCategories] = useState<Category[]>([]);
     const [nominees, setNominees] = useState<Nominee[]>([]);
+    const [recipients, setRecipients] = useState<Recipient[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Category form
@@ -80,6 +89,10 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
     const [updating, setUpdating] = useState<string | null>(null);
     const [bulkUpdating, setBulkUpdating] = useState<string | null>(null);
 
+    // Recipients
+    const [uploadingRecipients, setUploadingRecipients] = useState(false);
+    const [recipientFile, setRecipientFile] = useState<File | null>(null);
+
     // Live results
     const [results, setResults] = useState<VoteResult[]>([]);
     const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
@@ -87,18 +100,21 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
 
     const fetchData = useCallback(async () => {
         try {
-            const [catRes, nomRes, eventRes] = await Promise.all([
+            const [catRes, nomRes, eventRes, recipientsDataRes] = await Promise.all([
                 fetch(`/api/categories?eventId=${id}`),
                 fetch(`/api/nominees?awardEventId=${id}`),
-                fetch(`/api/awards/${id}`)
+                fetch(`/api/awards/${id}`),
+                fetch(`/api/awards/${id}/recipients`)
             ]);
 
             const catData = await catRes.json();
             const nomData = await nomRes.json();
             const eventDataRes = await eventRes.json();
+            const recipientsRes = await recipientsDataRes.json();
 
             if (Array.isArray(catData)) setCategories(catData);
             if (Array.isArray(nomData)) setNominees(nomData);
+            if (Array.isArray(recipientsRes)) setRecipients(recipientsRes);
             if (eventDataRes && !eventDataRes.error) {
                 setHeaderImage(eventDataRes.headerImage || '');
                 setSponsorImages(eventDataRes.sponsorImages || []);
@@ -514,6 +530,38 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
         }
     };
 
+    const handleRecipientFileUpload = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!recipientFile) return;
+
+        setUploadingRecipients(true);
+        const formData = new FormData();
+        formData.append('file', recipientFile);
+
+        try {
+            const res = await fetch(`/api/awards/${id}/recipients`, {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (res.ok) {
+                setRecipientFile(null);
+                // Reset file input if possible, or reload recipients
+                const recipientsData = await fetch(`/api/awards/${id}/recipients`).then(r => r.json());
+                if (Array.isArray(recipientsData)) setRecipients(recipientsData);
+                alert('Recipients uploaded successfully');
+            } else {
+                const err = await res.json();
+                alert(`Upload failed: ${err.error}`);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Upload failed');
+        } finally {
+            setUploadingRecipients(false);
+        }
+    };
+
     if (loading) {
         return (
             <main className="min-h-screen flex items-center justify-center">
@@ -665,6 +713,70 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                     {savingSettings ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                     Save Branding
                 </button>
+            </section>
+
+            {/* Recipient Management Section */}
+            <section className="bg-card border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-4">
+                    <Trophy className="w-5 h-5 text-yellow-400" />
+                    <h2 className="font-bold text-white">Award Recipients & Tokens</h2>
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-4 mb-6 items-end">
+                    <div className="flex-1 space-y-2 w-full">
+                        <label className="text-sm text-muted-foreground block">
+                            Upload Excel (Columns: "Name", "Follower Count")
+                        </label>
+                        <input
+                            type="file"
+                            accept=".xlsx, .xls"
+                            onChange={(e) => setRecipientFile(e.target.files?.[0] || null)}
+                            className="block w-full text-sm text-slate-500
+                                file:mr-4 file:py-2 file:px-4
+                                file:rounded-full file:border-0
+                                file:text-sm file:font-semibold
+                                file:bg-purple-50, file:text-purple-700
+                                hover:file:bg-purple-100"
+                        />
+                    </div>
+                    <button
+                        onClick={handleRecipientFileUpload}
+                        disabled={!recipientFile || uploadingRecipients}
+                        className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all h-10"
+                    >
+                        {uploadingRecipients ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Upload & Generate Tokens'}
+                    </button>
+                </div>
+
+                {recipients.length > 0 && (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left text-gray-400">
+                            <thead className="text-xs text-gray-200 uppercase bg-muted/50">
+                                <tr>
+                                    <th className="px-4 py-3 rounded-tl-lg">Name</th>
+                                    <th className="px-4 py-3">Followers</th>
+                                    <th className="px-4 py-3">Token</th>
+                                    <th className="px-4 py-3 rounded-tr-lg">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {recipients.map((recipient) => (
+                                    <tr key={recipient.id} className="bg-card border-b border-border hover:bg-muted/10">
+                                        <td className="px-4 py-3 font-medium text-white">{recipient.name}</td>
+                                        <td className="px-4 py-3">{recipient.followerCount.toLocaleString()}</td>
+                                        <td className="px-4 py-3 font-mono text-purple-400">{recipient.token}</td>
+                                        <td className="px-4 py-3">
+                                            <span className={`px-2 py-1 rounded-full text-xs ${recipient.status === 'generated' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'
+                                                }`}>
+                                                {recipient.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </section>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
