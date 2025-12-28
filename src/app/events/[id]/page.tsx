@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 import { useState, useEffect, use, useCallback, useRef } from 'react';
 import Link from 'next/link';
@@ -43,6 +44,9 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
     const [formConfig, setFormConfig] = useState<FormField[]>([]);
     const [showFormBuilder, setShowFormBuilder] = useState(false);
     const [isSavingForm, setIsSavingForm] = useState(false);
+    const [entryPassImage, setEntryPassImage] = useState('');
+    const [isSavingSettings, setIsSavingSettings] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
 
     // Modal State
     const [selectedAttendee, setSelectedAttendee] = useState<Attendee | null>(null);
@@ -93,6 +97,9 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                 if (event.formConfig) {
                     setFormConfig(event.formConfig);
                 }
+                if (event.entryPassImage) {
+                    setEntryPassImage(event.entryPassImage);
+                }
             }
         } catch (err) {
             console.error(err);
@@ -122,6 +129,31 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
             alert('Error saving configuration.');
         } finally {
             setIsSavingForm(false);
+        }
+    };
+
+    const saveEventSettings = async () => {
+        setIsSavingSettings(true);
+        try {
+            const res = await fetch('/api/events', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id,
+                    entryPassImage
+                })
+            });
+            if (res.ok) {
+                alert('Event settings saved successfully!');
+                setShowSettings(false);
+            } else {
+                alert('Failed to save event settings.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error saving settings.');
+        } finally {
+            setIsSavingSettings(false);
         }
     };
 
@@ -416,6 +448,13 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                         Form Settings
                     </button>
                     <button
+                        onClick={() => setShowSettings(!showSettings)}
+                        className={`flex items-center gap-2 ${showSettings ? 'bg-purple-600 text-white' : 'bg-purple-600/20 text-purple-400'} hover:bg-purple-600/40 text-xs px-3 py-2 rounded-full transition-all border border-purple-500/30`}
+                    >
+                        <Settings className="w-3 h-3" />
+                        Event Settings
+                    </button>
+                    <button
                         onClick={generateAllQRCodes}
                         disabled={isGeneratingAll || attendees.length === 0}
                         className="flex items-center gap-2 bg-green-600/20 hover:bg-green-600/40 disabled:opacity-50 text-green-400 text-xs px-3 py-2 rounded-full transition-all border border-green-500/30"
@@ -515,6 +554,57 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                     </div>
 
                     <FormBuilder fields={formConfig} onChange={setFormConfig} />
+                </div>
+            )}
+
+            {showSettings && (
+                <div className="bg-card border border-border rounded-xl p-6 shadow-xl animate-in slide-in-from-top-2">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                            <Settings className="w-5 h-5 text-purple-500" />
+                            Event Settings
+                        </h2>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowSettings(false)}
+                                className="px-4 py-2 text-sm text-muted-foreground hover:text-white transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={saveEventSettings}
+                                disabled={isSavingSettings}
+                                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {isSavingSettings ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-sm font-medium text-muted-foreground mb-1 block">
+                                Custom Entry Pass Template URL
+                            </label>
+                            <input
+                                type="url"
+                                value={entryPassImage}
+                                onChange={(e) => setEntryPassImage(e.target.value)}
+                                placeholder="https://example.com/template.jpg"
+                                className="w-full bg-muted/50 border border-border rounded-xl px-4 py-2 text-white outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Provide a URL for the background image of the entry pass.
+                            </p>
+                        </div>
+                        {entryPassImage && (
+                            <div className="mt-2">
+                                <p className="text-xs text-muted-foreground mb-1">Preview:</p>
+                                <img src={entryPassImage} alt="Entry Pass Template" className="h-40 object-contain rounded border border-border" />
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -656,6 +746,7 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                 value={selectedAttendee?.id || ''}
                 name={selectedAttendee?.name || ''}
                 eventName={eventName}
+                templateUrl={entryPassImage}
             />
 
             {/* Guest QR Code Modal */}
@@ -665,6 +756,7 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                 value={selectedGuest ? `${selectedGuest.attendeeId}_guest_${selectedGuest.guestName}` : ''}
                 name={selectedGuest ? `${selectedGuest.guestName} (Guest)` : ''}
                 eventName={eventName}
+                templateUrl={entryPassImage}
             />
 
             <EditAttendeeModal

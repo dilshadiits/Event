@@ -57,12 +57,13 @@ export async function POST(req: Request) {
             return errorResponse(message, 400);
         }
 
-        const { name, date } = result.data;
+        const { name, date, entryPassImage } = result.data;
 
         await dbConnect();
         const newEvent = await Event.create({
             name: sanitizeString(name),
             date,
+            entryPassImage: entryPassImage,
             formConfig: result.data.formConfig || []
         });
 
@@ -70,6 +71,7 @@ export async function POST(req: Request) {
             id: newEvent._id.toString(),
             name: newEvent.name,
             date: newEvent.date,
+            entryPassImage: newEvent.entryPassImage,
             formConfig: newEvent.formConfig
         }, 201);
     } catch (error) {
@@ -126,7 +128,7 @@ const getCategoryPriority = (category?: string): number => {
 export async function PUT(req: Request) {
     try {
         const body = await req.json();
-        const { id, registrationOpen, formConfig } = body;
+        const { id, name, date, registrationOpen, formConfig, entryPassImage } = body;
 
         if (!id) {
             return errorResponse('Event ID required', 400);
@@ -172,6 +174,9 @@ export async function PUT(req: Request) {
         // Update registration status
         if (registrationOpen !== undefined) event.registrationOpen = registrationOpen;
         if (formConfig !== undefined) event.formConfig = formConfig;
+        if (name !== undefined) event.name = name;
+        if (date !== undefined) event.date = date;
+        if (entryPassImage !== undefined) event.entryPassImage = entryPassImage;
 
         await event.save();
 

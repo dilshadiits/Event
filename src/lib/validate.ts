@@ -4,6 +4,7 @@ import { z } from 'zod';
 export const createEventSchema = z.object({
     name: z.string().min(1, 'Event name is required').max(200, 'Event name too long').trim(),
     date: z.string().min(1, 'Date is required'),
+    entryPassImage: z.string().optional(),
     formConfig: z.array(z.object({
         id: z.string(),
         label: z.string(),

@@ -4,6 +4,7 @@ const EventSchema = new Schema({
     name: { type: String, required: true },
     date: { type: String, required: true },
     registrationOpen: { type: Boolean, default: true },
+    entryPassImage: { type: String }, // Custom template URL
     formConfig: [{
         id: { type: String, required: true },
         label: { type: String, required: true },

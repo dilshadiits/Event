@@ -2,7 +2,7 @@
 'use client';
 import { useState, useEffect, use, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Plus, Trophy, Award, Trash2, Eye, EyeOff, Users, Vote, Link as LinkIcon, Check, Loader2, Image as ImageIcon, Settings, Crown, Medal, BarChart3, Radio, Edit2, X, ChevronUp, ChevronDown, Download } from 'lucide-react';
+import { ArrowLeft, Plus, Award, Trash2, Eye, EyeOff, Users, Vote, Link as LinkIcon, Check, Loader2, Image as ImageIcon, Settings, Crown, Medal, BarChart3, Radio, Edit2, X, ChevronUp, ChevronDown, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -24,24 +24,7 @@ interface Nominee {
     position: number;
 }
 
-interface Recipient {
-    id: string;
-    name: string;
-    additionalName?: string;
-    category?: string;
-    followerCount: number;
-    token: string;
-    status: string;
-}
 
-const FOLLOWER_CATEGORIES = [
-    '5k to 10k',
-    '10k to 100k',
-    '100k to 500k',
-    '500k to 1m',
-    '1m plus',
-    'Guest'
-];
 
 interface VoteResult {
     categoryId: string;
@@ -60,16 +43,6 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
 
     const [categories, setCategories] = useState<Category[]>([]);
     const [nominees, setNominees] = useState<Nominee[]>([]);
-    const [recipients, setRecipients] = useState<Recipient[]>([]);
-    // Recipients
-    const [uploadingRecipients, setUploadingRecipients] = useState(false);
-    const [recipientFile, setRecipientFile] = useState<File | null>(null);
-    const [editingRecipient, setEditingRecipient] = useState<Recipient | null>(null);
-    const [editRecipientName, setEditRecipientName] = useState('');
-    const [editRecipientAdditionalName, setEditRecipientAdditionalName] = useState('');
-    const [editRecipientCategory, setEditRecipientCategory] = useState('');
-    const [editRecipientFollowerCount, setEditRecipientFollowerCount] = useState(0);
-    const [savingRecipient, setSavingRecipient] = useState(false);
     const [loading, setLoading] = useState(true);
 
     // Category form
@@ -100,6 +73,7 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
 
     // Event settings
     const [headerImage, setHeaderImage] = useState('');
+    const [entryPassImage, setEntryPassImage] = useState('');
     const [newSponsorImage, setNewSponsorImage] = useState('');
     const [sponsorImages, setSponsorImages] = useState<string[]>([]);
     const [digitalMediaSponsorIndex, setDigitalMediaSponsorIndex] = useState(-1);
@@ -118,23 +92,21 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
 
     const fetchData = useCallback(async () => {
         try {
-            const [catRes, nomRes, eventRes, recipientsDataRes] = await Promise.all([
+            const [catRes, nomRes, eventRes] = await Promise.all([
                 fetch(`/api/categories?eventId=${id}`),
                 fetch(`/api/nominees?awardEventId=${id}`),
-                fetch(`/api/awards/${id}`),
-                fetch(`/api/awards/${id}/recipients`)
+                fetch(`/api/awards/${id}`)
             ]);
 
             const catData = await catRes.json();
             const nomData = await nomRes.json();
             const eventDataRes = await eventRes.json();
-            const recipientsRes = await recipientsDataRes.json();
 
             if (Array.isArray(catData)) setCategories(catData);
             if (Array.isArray(nomData)) setNominees(nomData);
-            if (Array.isArray(recipientsRes)) setRecipients(recipientsRes);
             if (eventDataRes && !eventDataRes.error) {
                 setHeaderImage(eventDataRes.headerImage || '');
+                setEntryPassImage(eventDataRes.entryPassImage || '');
                 setSponsorImages(eventDataRes.sponsorImages || []);
                 setDigitalMediaSponsorIndex(eventDataRes.digitalMediaSponsorIndex ?? -1);
             }
@@ -437,6 +409,7 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     headerImage,
+                    entryPassImage,
                     sponsorImages,
                     digitalMediaSponsorIndex
                 })
@@ -548,79 +521,6 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
         }
     };
 
-    const handleRecipientFileUpload = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!recipientFile) return;
-
-        setUploadingRecipients(true);
-        const formData = new FormData();
-        formData.append('file', recipientFile);
-
-        try {
-            const res = await fetch(`/api/awards/${id}/recipients`, {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (res.ok) {
-                setRecipientFile(null);
-                // Reset file input if possible, or reload recipients
-                const recipientsData = await fetch(`/api/awards/${id}/recipients`).then(r => r.json());
-                if (Array.isArray(recipientsData)) setRecipients(recipientsData);
-                alert('Recipients uploaded successfully');
-            } else {
-                const err = await res.json();
-                alert(`Upload failed: ${err.error}`);
-            }
-        } catch (error) {
-            console.error(error);
-            alert('Upload failed');
-        } finally {
-            setUploadingRecipients(false);
-        }
-    };
-
-    const openEditRecipient = (recipient: Recipient) => {
-        setEditingRecipient(recipient);
-        setEditRecipientName(recipient.name);
-        setEditRecipientAdditionalName(recipient.additionalName || '');
-        setEditRecipientCategory(recipient.category || '');
-        setEditRecipientFollowerCount(recipient.followerCount);
-    };
-
-    const saveEditedRecipient = async () => {
-        if (!editingRecipient || !editRecipientName.trim() || savingRecipient) return;
-
-        setSavingRecipient(true);
-        try {
-            const res = await fetch(`/api/awards/${id}/recipients`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    recipientId: editingRecipient.id,
-                    name: editRecipientName,
-                    additionalName: editRecipientAdditionalName,
-                    category: editRecipientCategory,
-                    followerCount: editRecipientFollowerCount
-                })
-            });
-
-            if (res.ok) {
-                setEditingRecipient(null);
-                fetchData();
-            } else {
-                const data = await res.json();
-                console.error('Failed to update recipient:', data.error);
-                alert(`Failed to update: ${data.error}`);
-            }
-        } catch (err) {
-            console.error(err);
-            alert('Failed to update recipient');
-        } finally {
-            setSavingRecipient(false);
-        }
-    };
-
 
 
     if (loading) {
@@ -641,7 +541,7 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                     </Link>
                     <div>
                         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white flex items-center gap-2 sm:gap-3">
-                            <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-500" />
+                            <Award className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-500" />
                             Award Management
                         </h1>
                         <p className="text-xs sm:text-sm text-muted-foreground">Manage categories and nominees</p>
@@ -763,6 +663,27 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                             )}
                         </div>
                     )}
+
+                    {/* Entry Pass Template */}
+                    <div className="space-y-2 md:col-span-2">
+                        <label className="text-sm text-muted-foreground flex items-center gap-2">
+                            <ImageIcon className="w-4 h-4" />
+                            Entry Pass Template URL
+                        </label>
+                        <input
+                            type="url"
+                            value={entryPassImage}
+                            onChange={(e) => setEntryPassImage(e.target.value)}
+                            placeholder="https://example.com/template.jpg"
+                            className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                        />
+                        {entryPassImage && (
+                            <div className="mt-2">
+                                <p className="text-xs text-muted-foreground mb-1">Preview:</p>
+                                <img src={entryPassImage} alt="Entry Pass Template" className="h-40 object-contain rounded border border-border" />
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <button
@@ -776,164 +697,7 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                 </button>
             </section>
 
-            {/* Recipient Management Section */}
-            <section className="bg-card border border-border rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-4">
-                    <Trophy className="w-5 h-5 text-yellow-400" />
-                    <h2 className="font-bold text-white">Award Recipients & Tokens</h2>
-                </div>
 
-                <div className="flex flex-col md:flex-row gap-6 mb-6 items-end">
-                    <div className="flex-1 space-y-2 w-full">
-                        <label className="text-sm text-muted-foreground block">
-                            Upload Excel (Columns: &quot;Name&quot;, &quot;Follower Count&quot;, &quot;Ticket Number&quot;)
-                        </label>
-                        <input
-                            type="file"
-                            accept=".xlsx, .xls"
-                            onChange={(e) => setRecipientFile(e.target.files?.[0] || null)}
-                            className="block w-full text-base text-slate-500
-                                file:mr-4 file:py-2 file:px-4
-                                file:rounded-full file:border-0
-                                file:text-sm file:font-semibold
-                                file:bg-purple-50 file:text-purple-700
-                                hover:file:bg-purple-100 cursor-pointer"
-                        />
-                    </div>
-                    <button
-                        onClick={handleRecipientFileUpload}
-                        disabled={!recipientFile || uploadingRecipients}
-                        className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all h-10"
-                    >
-                        {uploadingRecipients ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Upload & Generate Tickets'}
-                    </button>
-                </div>
-
-
-
-                {recipients.length > 0 && (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left text-gray-400">
-                            <thead className="text-xs text-gray-200 uppercase bg-muted/50">
-                                <tr>
-                                    <th className="px-4 py-3 rounded-tl-lg">Name</th>
-                                    <th className="px-4 py-3">Followers</th>
-                                    <th className="px-4 py-3">Category</th>
-                                    <th className="px-4 py-3">Token</th>
-                                    <th className="px-4 py-3">Status</th>
-                                    <th className="px-4 py-3 rounded-tr-lg">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {recipients.map((recipient) => (
-                                    <tr key={recipient.id} className="bg-card border-b border-border hover:bg-muted/10">
-                                        <td className="px-4 py-3">
-                                            <div className="font-medium text-white">{recipient.name}</div>
-                                            {recipient.additionalName && (
-                                                <div className="text-xs text-muted-foreground">{recipient.additionalName}</div>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3">{recipient.followerCount.toLocaleString()}</td>
-                                        <td className="px-4 py-3">
-                                            {recipient.category ? (
-                                                <span className="px-2 py-1 rounded-md bg-purple-500/10 text-purple-400 text-xs border border-purple-500/20">
-                                                    {recipient.category}
-                                                </span>
-                                            ) : (
-                                                <span className="text-muted-foreground text-xs">-</span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3 font-mono text-purple-400">{recipient.token}</td>
-                                        <td className="px-4 py-3">
-                                            <span className={`px-2 py-1 rounded-full text-xs ${recipient.status === 'generated' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'
-                                                }`}>
-                                                {recipient.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <button
-                                                onClick={() => openEditRecipient(recipient)}
-                                                className="p-1 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white"
-                                            >
-                                                <Edit2 className="w-4 h-4" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </section>
-
-            {/* Edit Recipient Modal */}
-            {editingRecipient && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-card border border-border w-full max-w-md rounded-xl p-6 space-y-4">
-                        <div className="flex justify-between items-center">
-                            <h3 className="text-lg font-bold text-white">Edit Recipient</h3>
-                            <button onClick={() => setEditingRecipient(null)} className="text-muted-foreground hover:text-white">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-muted-foreground">Name</label>
-                                <input
-                                    type="text"
-                                    value={editRecipientName}
-                                    onChange={(e) => setEditRecipientName(e.target.value)}
-                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-purple-500 outline-none"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-muted-foreground">Additional Name</label>
-                                <input
-                                    type="text"
-                                    value={editRecipientAdditionalName}
-                                    onChange={(e) => setEditRecipientAdditionalName(e.target.value)}
-                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-purple-500 outline-none"
-                                    placeholder="e.g. Spouse, Partner"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-muted-foreground">Category</label>
-                                <select
-                                    value={editRecipientCategory}
-                                    onChange={(e) => setEditRecipientCategory(e.target.value)}
-                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-purple-500 outline-none"
-                                >
-                                    <option value="">Select Category</option>
-                                    {FOLLOWER_CATEGORIES.map(cat => (
-                                        <option key={cat} value={cat}>{cat}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-muted-foreground">Follower Count</label>
-                                <input
-                                    type="number"
-                                    value={editRecipientFollowerCount}
-                                    onChange={(e) => setEditRecipientFollowerCount(Number(e.target.value))}
-                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-purple-500 outline-none"
-                                />
-                            </div>
-
-                            <button
-                                onClick={saveEditedRecipient}
-                                disabled={savingRecipient || !editRecipientName.trim()}
-                                className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
-                            >
-                                {savingRecipient ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Categories Section */}
@@ -1289,152 +1053,156 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
             </div>
 
             {/* Edit Nominee Modal */}
-            {editingNominee && (
-                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md relative animate-in fade-in zoom-in duration-200">
-                        <button
-                            onClick={() => setEditingNominee(null)}
-                            className="absolute top-4 right-4 p-1 text-muted-foreground hover:text-white rounded-lg hover:bg-muted transition-colors"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
+            {
+                editingNominee && (
+                    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md relative animate-in fade-in zoom-in duration-200">
+                            <button
+                                onClick={() => setEditingNominee(null)}
+                                className="absolute top-4 right-4 p-1 text-muted-foreground hover:text-white rounded-lg hover:bg-muted transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
 
-                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <Edit2 className="w-5 h-5 text-yellow-400" />
-                            Edit Nominee
-                        </h3>
+                            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                <Edit2 className="w-5 h-5 text-yellow-400" />
+                                Edit Nominee
+                            </h3>
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-sm text-muted-foreground block mb-1">Name *</label>
-                                <input
-                                    type="text"
-                                    value={editNomineeName}
-                                    onChange={(e) => setEditNomineeName(e.target.value)}
-                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-yellow-500 outline-none"
-                                    placeholder="Nominee name"
-                                />
-                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-sm text-muted-foreground block mb-1">Name *</label>
+                                    <input
+                                        type="text"
+                                        value={editNomineeName}
+                                        onChange={(e) => setEditNomineeName(e.target.value)}
+                                        className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-yellow-500 outline-none"
+                                        placeholder="Nominee name"
+                                    />
+                                </div>
 
-                            <div>
-                                <label className="text-sm text-muted-foreground block mb-1">Description</label>
-                                <textarea
-                                    value={editNomineeDesc}
-                                    onChange={(e) => setEditNomineeDesc(e.target.value)}
-                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-yellow-500 outline-none resize-none"
-                                    rows={2}
-                                    placeholder="Brief description (optional)"
-                                />
-                            </div>
+                                <div>
+                                    <label className="text-sm text-muted-foreground block mb-1">Description</label>
+                                    <textarea
+                                        value={editNomineeDesc}
+                                        onChange={(e) => setEditNomineeDesc(e.target.value)}
+                                        className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-yellow-500 outline-none resize-none"
+                                        rows={2}
+                                        placeholder="Brief description (optional)"
+                                    />
+                                </div>
 
-                            <div>
-                                <label className="text-sm text-muted-foreground block mb-1">Image URL</label>
-                                <input
-                                    type="url"
-                                    value={editNomineeImage}
-                                    onChange={(e) => setEditNomineeImage(e.target.value)}
-                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-yellow-500 outline-none"
-                                    placeholder="https://example.com/image.jpg (optional)"
-                                />
-                                {editNomineeImage && (
-                                    <img src={editNomineeImage} alt="Preview" className="mt-2 w-16 h-16 object-cover rounded-lg border border-border" />
-                                )}
-                            </div>
+                                <div>
+                                    <label className="text-sm text-muted-foreground block mb-1">Image URL</label>
+                                    <input
+                                        type="url"
+                                        value={editNomineeImage}
+                                        onChange={(e) => setEditNomineeImage(e.target.value)}
+                                        className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-yellow-500 outline-none"
+                                        placeholder="https://example.com/image.jpg (optional)"
+                                    />
+                                    {editNomineeImage && (
+                                        <img src={editNomineeImage} alt="Preview" className="mt-2 w-16 h-16 object-cover rounded-lg border border-border" />
+                                    )}
+                                </div>
 
-                            <div>
-                                <label className="text-sm text-muted-foreground block mb-1">Category</label>
-                                <select
-                                    value={editNomineeCategory}
-                                    onChange={(e) => setEditNomineeCategory(e.target.value)}
-                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-yellow-500 outline-none"
-                                >
-                                    <option value="">All Categories</option>
-                                    {categories.map(cat => (
-                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                    ))}
-                                </select>
-                            </div>
+                                <div>
+                                    <label className="text-sm text-muted-foreground block mb-1">Category</label>
+                                    <select
+                                        value={editNomineeCategory}
+                                        onChange={(e) => setEditNomineeCategory(e.target.value)}
+                                        className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-yellow-500 outline-none"
+                                    >
+                                        <option value="">All Categories</option>
+                                        {categories.map(cat => (
+                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                            <div className="flex gap-3 pt-2">
-                                <button
-                                    onClick={() => setEditingNominee(null)}
-                                    className="flex-1 px-4 py-2 border border-border text-muted-foreground rounded-lg hover:bg-muted transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={saveEditedNominee}
-                                    disabled={!editNomineeName.trim() || savingNominee}
-                                    className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                                >
-                                    {savingNominee ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                                    Save Changes
-                                </button>
+                                <div className="flex gap-3 pt-2">
+                                    <button
+                                        onClick={() => setEditingNominee(null)}
+                                        className="flex-1 px-4 py-2 border border-border text-muted-foreground rounded-lg hover:bg-muted transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={saveEditedNominee}
+                                        disabled={!editNomineeName.trim() || savingNominee}
+                                        className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                                    >
+                                        {savingNominee ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                        Save Changes
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Edit Category Modal */}
-            {editingCategory && (
-                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md relative animate-in fade-in zoom-in duration-200">
-                        <button
-                            onClick={() => setEditingCategory(null)}
-                            className="absolute top-4 right-4 p-1 text-muted-foreground hover:text-white rounded-lg hover:bg-muted transition-colors"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
+            {
+                editingCategory && (
+                    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md relative animate-in fade-in zoom-in duration-200">
+                            <button
+                                onClick={() => setEditingCategory(null)}
+                                className="absolute top-4 right-4 p-1 text-muted-foreground hover:text-white rounded-lg hover:bg-muted transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
 
-                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <Edit2 className="w-5 h-5 text-purple-400" />
-                            Edit Category
-                        </h3>
+                            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                <Edit2 className="w-5 h-5 text-purple-400" />
+                                Edit Category
+                            </h3>
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-sm text-muted-foreground block mb-1">Name *</label>
-                                <input
-                                    type="text"
-                                    value={editCatName}
-                                    onChange={(e) => setEditCatName(e.target.value)}
-                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-purple-500 outline-none"
-                                    placeholder="Category name"
-                                />
-                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-sm text-muted-foreground block mb-1">Name *</label>
+                                    <input
+                                        type="text"
+                                        value={editCatName}
+                                        onChange={(e) => setEditCatName(e.target.value)}
+                                        className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                                        placeholder="Category name"
+                                    />
+                                </div>
 
-                            <div>
-                                <label className="text-sm text-muted-foreground block mb-1">Description</label>
-                                <textarea
-                                    value={editCatDesc}
-                                    onChange={(e) => setEditCatDesc(e.target.value)}
-                                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-purple-500 outline-none resize-none"
-                                    rows={2}
-                                    placeholder="Brief description (optional)"
-                                />
-                            </div>
+                                <div>
+                                    <label className="text-sm text-muted-foreground block mb-1">Description</label>
+                                    <textarea
+                                        value={editCatDesc}
+                                        onChange={(e) => setEditCatDesc(e.target.value)}
+                                        className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-purple-500 outline-none resize-none"
+                                        rows={2}
+                                        placeholder="Brief description (optional)"
+                                    />
+                                </div>
 
-                            <div className="flex gap-3 pt-2">
-                                <button
-                                    onClick={() => setEditingCategory(null)}
-                                    className="flex-1 px-4 py-2 border border-border text-muted-foreground rounded-lg hover:bg-muted transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={saveEditedCategory}
-                                    disabled={!editCatName.trim() || savingCategory}
-                                    className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                                >
-                                    {savingCategory ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                                    Save Changes
-                                </button>
+                                <div className="flex gap-3 pt-2">
+                                    <button
+                                        onClick={() => setEditingCategory(null)}
+                                        className="flex-1 px-4 py-2 border border-border text-muted-foreground rounded-lg hover:bg-muted transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={saveEditedCategory}
+                                        disabled={!editCatName.trim() || savingCategory}
+                                        className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                                    >
+                                        {savingCategory ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                        Save Changes
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </main>
+                )
+            }
+        </main >
     );
 }

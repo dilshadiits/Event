@@ -9,9 +9,10 @@ interface QRCodeModalProps {
     eventName: string;
     isOpen: boolean;
     onClose: () => void;
+    templateUrl?: string;
 }
 
-export default function QRCodeModal({ value, name, eventName, isOpen, onClose }: QRCodeModalProps) {
+export default function QRCodeModal({ value, name, eventName, isOpen, onClose, templateUrl = '/entry-pass-template.jpg' }: QRCodeModalProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const qrRef = useRef<HTMLDivElement>(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -48,7 +49,7 @@ export default function QRCodeModal({ value, name, eventName, isOpen, onClose }:
         // Load the template image
         const templateImg = new Image();
         templateImg.crossOrigin = 'anonymous';
-        templateImg.src = '/entry-pass-template.jpg';
+        templateImg.src = templateUrl || '/entry-pass-template.jpg';
 
         templateImg.onload = () => {
             // Set canvas size to match template
