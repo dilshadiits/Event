@@ -31,10 +31,12 @@ const subscribe = (callback: () => void) => {
     return () => window.removeEventListener('storage', callback);
 };
 
+const APP_STORAGE_KEY = 'admin_session_v2';
+
 // Get auth token from localStorage
 const getSnapshot = () => {
     if (typeof window === 'undefined') return null;
-    return localStorage.getItem('app_auth_token');
+    return localStorage.getItem(APP_STORAGE_KEY);
 };
 
 // Server snapshot (no localStorage)
@@ -53,10 +55,12 @@ export default function PasswordGate({ children }: PasswordGateProps) {
     // This prevents the password gate from flashing on public routes
     const isPublic = isPublicRoute(pathname);
 
-    // Use useSyncExternalStore for synchronous localStorage access
+
+
     const authToken = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
     const isAuthenticated = authToken === 'authenticated';
 
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -71,17 +75,17 @@ export default function PasswordGate({ children }: PasswordGateProps) {
             const res = await fetch('/api/password', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password })
+                body: JSON.stringify({ username, password })
             });
 
             const data = await res.json();
 
             if (res.ok && data.success) {
-                localStorage.setItem('app_auth_token', 'authenticated');
+                localStorage.setItem(APP_STORAGE_KEY, 'authenticated');
                 // Force re-render by dispatching storage event
                 window.dispatchEvent(new Event('storage'));
             } else {
-                setError(data.error || 'Invalid password');
+                setError(data.error || 'Invalid credentials');
                 setPassword('');
             }
         } catch {
@@ -112,19 +116,28 @@ export default function PasswordGate({ children }: PasswordGateProps) {
                             <Lock className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
                         </div>
                         <h1 className="text-xl sm:text-2xl font-bold text-white">Event QR Manager</h1>
-                        <p className="text-sm sm:text-base text-muted-foreground mt-2">Enter password to continue</p>
+                        <p className="text-sm sm:text-base text-muted-foreground mt-2">Enter credentials to continue</p>
                     </div>
 
                     {/* Login Form */}
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <input
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                placeholder="Username"
+                                className="w-full bg-muted border border-border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                                autoFocus
+                            />
+                        </div>
                         <div className="relative">
                             <input
                                 type={showPassword ? 'text' : 'password'}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Enter password"
+                                placeholder="Password"
                                 className="w-full bg-muted border border-border rounded-lg px-4 py-3 pr-12 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
-                                autoFocus
                             />
                             <button
                                 type="button"
@@ -141,7 +154,7 @@ export default function PasswordGate({ children }: PasswordGateProps) {
 
                         <button
                             type="submit"
-                            disabled={!password || loading}
+                            disabled={!username || !password || loading}
                             className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-lg font-bold transition-all flex items-center justify-center gap-2"
                         >
                             {loading ? (
@@ -150,7 +163,7 @@ export default function PasswordGate({ children }: PasswordGateProps) {
                                     Verifying...
                                 </>
                             ) : (
-                                'Enter'
+                                'Login'
                             )}
                         </button>
                     </form>
