@@ -143,7 +143,7 @@ export default function AwardCategoryManager({ eventId }: AwardCategoryManagerPr
                     type="text"
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
-                    placeholder="Category name (e.g., Best Influencer)"
+                    placeholder="Category name (e.g., Best Attendee)"
                     className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-purple-500 outline-none"
                 />
                 <div className="flex gap-2">
@@ -194,8 +194,8 @@ export default function AwardCategoryManager({ eventId }: AwardCategoryManagerPr
                                     onClick={() => toggleActive(category)}
                                     disabled={updating === category.id}
                                     className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${category.isActive
-                                            ? 'bg-green-500/10 text-green-400 border-green-500/30 hover:bg-green-500/20'
-                                            : 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20'
+                                        ? 'bg-green-500/10 text-green-400 border-green-500/30 hover:bg-green-500/20'
+                                        : 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20'
                                         }`}
                                 >
                                     {category.isActive ? 'Open' : 'Closed'}
@@ -206,8 +206,8 @@ export default function AwardCategoryManager({ eventId }: AwardCategoryManagerPr
                                     onClick={() => toggleResults(category)}
                                     disabled={updating === category.id}
                                     className={`p-2 rounded-lg border transition-all ${category.showResults
-                                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-                                            : 'bg-muted/50 text-muted-foreground border-border'
+                                        ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                                        : 'bg-muted/50 text-muted-foreground border-border'
                                         }`}
                                     title={category.showResults ? 'Results visible' : 'Results hidden'}
                                 >

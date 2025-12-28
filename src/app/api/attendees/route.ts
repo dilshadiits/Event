@@ -112,7 +112,7 @@ export async function POST(req: Request) {
             return errorResponse(message, 400);
         }
 
-        const { name, email, phone, additionalName, instagram, youtube, category, guest_names, meal_preference, eventId, inviteCode } = result.data;
+        const { name, email, phone, additionalName, instagram, youtube, category, guest_names, meal_preference, eventId, inviteCode, customResponses } = result.data;
 
         if (!isValidObjectId(eventId)) {
             return errorResponse('Invalid Event ID format', 400);
@@ -159,6 +159,7 @@ export async function POST(req: Request) {
             category: category ? sanitizeString(category) : undefined,
             guest_names: guest_names ? sanitizeString(guest_names) : undefined,
             meal_preference,
+            customResponses: customResponses || {},
             eventId
         });
 
@@ -226,7 +227,7 @@ export async function PUT(req: Request) {
             return errorResponse(message, 400);
         }
 
-        const { id, name, additionalName, email, phone, instagram, youtube, category, guest_names, meal_preference } = result.data;
+        const { id, name, additionalName, email, phone, instagram, youtube, category, guest_names, meal_preference, customResponses } = result.data;
 
         if (!isValidObjectId(id)) {
             return errorResponse('Invalid Attendee ID format', 400);
@@ -263,6 +264,7 @@ export async function PUT(req: Request) {
         }
         if (guest_names !== undefined) updateData.guest_names = guest_names ? sanitizeString(guest_names) : undefined;
         if (meal_preference !== undefined) updateData.meal_preference = meal_preference;
+        if (customResponses !== undefined) updateData.customResponses = customResponses;
 
         // Execute update
 

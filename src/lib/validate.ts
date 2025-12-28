@@ -4,6 +4,15 @@ import { z } from 'zod';
 export const createEventSchema = z.object({
     name: z.string().min(1, 'Event name is required').max(200, 'Event name too long').trim(),
     date: z.string().min(1, 'Date is required'),
+    formConfig: z.array(z.object({
+        id: z.string(),
+        label: z.string(),
+        type: z.enum(['text', 'select', 'checkbox', 'email', 'phone', 'number']),
+        required: z.boolean().optional(),
+        options: z.array(z.string()).optional(),
+        enabled: z.boolean().optional(),
+        isSystem: z.boolean().optional()
+    })).optional(),
 });
 
 // Attendee validation
@@ -20,6 +29,7 @@ export const createAttendeeSchema = z.object({
     meal_preference: z.enum(['veg', 'non-veg']).optional().nullable().transform(v => v || 'veg'),
     eventId: z.string().min(1, 'Event ID is required'),
     inviteCode: z.string().optional().nullable(),
+    customResponses: z.record(z.string(), z.string()).optional(), // Map<FieldID, ResponseString>
 });
 
 // Update attendee validation
@@ -35,6 +45,7 @@ export const updateAttendeeSchema = z.object({
     category: z.string().max(50).optional().nullable(),
     guest_names: z.string().max(500).optional().nullable(),
     meal_preference: z.enum(['veg', 'non-veg']).optional().nullable(),
+    customResponses: z.record(z.string(), z.string()).optional(),
 });
 
 // Scan validation

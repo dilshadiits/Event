@@ -3,9 +3,31 @@ import { Event, Attendee } from '@/models';
 import { createEventSchema, sanitizeString, isValidObjectId } from '@/lib/validate';
 import { errorResponse, successResponse } from '@/lib/api-utils';
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
+        const { searchParams } = new URL(req.url);
+        const id = searchParams.get('id');
+
         await dbConnect();
+
+        if (id) {
+            if (!isValidObjectId(id)) {
+                return errorResponse('Invalid Event ID format', 400);
+            }
+            const event = await Event.findById(id).lean();
+            if (!event) {
+                return errorResponse('Event not found', 404);
+            }
+            return successResponse({
+                id: event._id.toString(),
+                name: event.name,
+                date: event.date,
+                registrationOpen: event.registrationOpen ?? true,
+                formConfig: event.formConfig || [],
+                created_at: event.created_at
+            });
+        }
+
         const events = await Event.find({}).sort({ created_at: -1 }).lean();
 
         const formatted = events.map(e => ({
@@ -13,6 +35,7 @@ export async function GET() {
             name: e.name,
             date: e.date,
             registrationOpen: e.registrationOpen ?? true,
+            // formConfig is optional in list view to save bandwidth
             created_at: e.created_at
         }));
 
@@ -39,13 +62,15 @@ export async function POST(req: Request) {
         await dbConnect();
         const newEvent = await Event.create({
             name: sanitizeString(name),
-            date
+            date,
+            formConfig: result.data.formConfig || []
         });
 
         return successResponse({
             id: newEvent._id.toString(),
             name: newEvent.name,
-            date: newEvent.date
+            date: newEvent.date,
+            formConfig: newEvent.formConfig
         }, 201);
     } catch (error) {
         console.error('[Events POST]', error);
@@ -101,7 +126,7 @@ const getCategoryPriority = (category?: string): number => {
 export async function PUT(req: Request) {
     try {
         const body = await req.json();
-        const { id, registrationOpen } = body;
+        const { id, registrationOpen, formConfig } = body;
 
         if (!id) {
             return errorResponse('Event ID required', 400);
@@ -145,7 +170,9 @@ export async function PUT(req: Request) {
         }
 
         // Update registration status
-        event.registrationOpen = registrationOpen;
+        if (registrationOpen !== undefined) event.registrationOpen = registrationOpen;
+        if (formConfig !== undefined) event.formConfig = formConfig;
+
         await event.save();
 
         return successResponse({

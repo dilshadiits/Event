@@ -4,6 +4,15 @@ const EventSchema = new Schema({
     name: { type: String, required: true },
     date: { type: String, required: true },
     registrationOpen: { type: Boolean, default: true },
+    formConfig: [{
+        id: { type: String, required: true },
+        label: { type: String, required: true },
+        type: { type: String, enum: ['text', 'select', 'checkbox', 'email', 'phone', 'number'], required: true },
+        required: { type: Boolean, default: false },
+        options: [{ type: String }], // For select type
+        enabled: { type: Boolean, default: true },
+        isSystem: { type: Boolean, default: false }, // true for default fields like Name, Email, etc.
+    }],
     created_at: { type: Date, default: Date.now },
 });
 
@@ -22,6 +31,7 @@ const AttendeeSchema = new mongoose.Schema({
     category: { type: String },
     guest_names: { type: String },
     meal_preference: { type: String, enum: ['veg', 'non-veg'], default: 'veg' },
+    customResponses: { type: Map, of: String }, // Stores responses Key: Field ID, Value: Response
     status: { type: String, enum: ['registered', 'checked-in'], default: 'registered' },
     checked_in_at: { type: Date },
     guest_checked_in: { type: Boolean, default: false },

@@ -1,9 +1,10 @@
 'use client';
 import { useState, useEffect, use, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Search, QrCode, CheckCircle, Instagram, Phone, Users, Link as LinkIcon, Check, Trash2, Zap, RefreshCw, Edit, Download, Loader2, SortDesc, Play, Square } from 'lucide-react';
+import { ArrowLeft, Search, QrCode, CheckCircle, Instagram, Phone, Users, Link as LinkIcon, Check, Trash2, Zap, RefreshCw, Edit, Download, Loader2, SortDesc, Play, Square, Settings } from 'lucide-react';
 import QRCodeModal from '@/components/QRCodeModal';
 import EditAttendeeModal from '@/components/EditAttendeeModal';
+import FormBuilder, { FormField } from '@/components/FormBuilder';
 import { QRCodeCanvas } from 'qrcode.react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -39,6 +40,9 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
     const [sortBy, setSortBy] = useState<string>('default');
     const [registrationOpen, setRegistrationOpen] = useState(true);
     const [togglingRegistration, setTogglingRegistration] = useState(false);
+    const [formConfig, setFormConfig] = useState<FormField[]>([]);
+    const [showFormBuilder, setShowFormBuilder] = useState(false);
+    const [isSavingForm, setIsSavingForm] = useState(false);
 
     // Modal State
     const [selectedAttendee, setSelectedAttendee] = useState<Attendee | null>(null);
@@ -79,14 +83,16 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
         setTimeout(() => setCopied(false), 2000);
     };
 
-    // Fetch registration status
-    const fetchRegistrationStatus = useCallback(async () => {
+    // Fetch registration status and config
+    const fetchEventDetails = useCallback(async () => {
         try {
-            const res = await fetch('/api/events');
-            const events = await res.json();
-            const event = events.find((e: { id: string }) => e.id === id);
-            if (event) {
+            const res = await fetch(`/api/events?id=${id}`);
+            const event = await res.json();
+            if (event.id) {
                 setRegistrationOpen(event.registrationOpen ?? true);
+                if (event.formConfig) {
+                    setFormConfig(event.formConfig);
+                }
             }
         } catch (err) {
             console.error(err);
@@ -94,8 +100,30 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
     }, [id]);
 
     useEffect(() => {
-        fetchRegistrationStatus();
-    }, [fetchRegistrationStatus]);
+        fetchEventDetails();
+    }, [fetchEventDetails]);
+
+    const saveFormConfig = async () => {
+        setIsSavingForm(true);
+        try {
+            const res = await fetch('/api/events', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, formConfig })
+            });
+            if (res.ok) {
+                alert('Form configuration saved successfully!');
+                setShowFormBuilder(false);
+            } else {
+                alert('Failed to save form configuration.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error saving configuration.');
+        } finally {
+            setIsSavingForm(false);
+        }
+    };
 
     const toggleRegistration = async () => {
         if (!confirm(registrationOpen
@@ -381,6 +409,13 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                         Spot Reg.
                     </Link>
                     <button
+                        onClick={() => setShowFormBuilder(!showFormBuilder)}
+                        className={`flex items-center gap-2 ${showFormBuilder ? 'bg-blue-600 text-white' : 'bg-blue-600/20 text-blue-400'} hover:bg-blue-600/40 text-xs px-3 py-2 rounded-full transition-all border border-blue-500/30`}
+                    >
+                        <Settings className="w-3 h-3" />
+                        Form Settings
+                    </button>
+                    <button
                         onClick={generateAllQRCodes}
                         disabled={isGeneratingAll || attendees.length === 0}
                         className="flex items-center gap-2 bg-green-600/20 hover:bg-green-600/40 disabled:opacity-50 text-green-400 text-xs px-3 py-2 rounded-full transition-all border border-green-500/30"
@@ -453,16 +488,47 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                 </div>
             </div>
 
-            <div className="space-y-6">
+            {/* Form Builder Section */}
+            {showFormBuilder && (
+                <div className="bg-card border border-border rounded-xl p-6 shadow-xl animate-in slide-in-from-top-2">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                            <Settings className="w-5 h-5 text-blue-500" />
+                            Serialize Registration Form
+                        </h2>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowFormBuilder(false)}
+                                className="px-4 py-2 text-sm text-muted-foreground hover:text-white transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={saveFormConfig}
+                                disabled={isSavingForm}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {isSavingForm ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+
+                    <FormBuilder fields={formConfig} onChange={setFormConfig} />
+                </div>
+            )}
+
+            {/* Search and Filter */}
+            <div className="space-y-4 sm:space-y-6">
                 <div className="flex flex-col sm:flex-row gap-3">
                     <div className="relative flex-1">
                         <Search className="absolute left-4 top-3.5 w-5 h-5 text-muted-foreground" />
                         <input
                             type="text"
-                            placeholder="Search influencers by name or category..."
+                            placeholder="Search attendees..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full bg-muted/50 border border-border rounded-xl pl-12 pr-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full bg-muted/50 border border-border rounded-xl pl-12 pr-4 py-3 text-white text-base focus:ring-2 focus:ring-blue-500 outline-none"
                         />
                     </div>
                     <div className="relative">
@@ -470,7 +536,7 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                         <select
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
-                            className="w-full sm:w-auto bg-muted/50 border border-border rounded-xl pl-10 pr-8 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer"
+                            className="w-full sm:w-auto bg-muted/50 border border-border rounded-xl pl-10 pr-8 py-3 text-white text-base focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer"
                         >
                             <option value="default" className="bg-black">All Categories</option>
                             <option value="all" className="bg-black">Sort by Priority</option>
@@ -544,7 +610,7 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto pl-16 md:pl-0">
+                                    <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto mt-4 md:mt-0 pt-4 md:pt-0 border-t border-border/30 md:border-0">
                                         <div className="text-right">
                                             {attendee.status === 'checked-in' ? (
                                                 <span className="flex items-center gap-1 text-green-400 bg-green-900/20 px-3 py-1 rounded-lg text-sm font-medium border border-green-900/50">
@@ -606,6 +672,7 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                 isOpen={!!editingAttendee}
                 onClose={() => setEditingAttendee(null)}
                 onSave={handleAttendeeUpdate}
+                fields={formConfig}
             />
 
             {/* Hidden container for QR generation */}

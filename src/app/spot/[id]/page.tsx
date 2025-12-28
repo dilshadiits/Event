@@ -4,6 +4,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import QRCode from 'qrcode';
 import { Download, CheckCircle, UserPlus, Phone, Users, ArrowLeft, Zap, FileText, Instagram, Youtube, Tag, Utensils, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { FormField, SYSTEM_FIELDS_DEFAULTS } from '@/components/FormBuilder';
 
 interface EventInfo {
     id: string;
@@ -14,7 +15,7 @@ interface EventInfo {
 export default function SpotRegistrationPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const [event, setEvent] = useState<EventInfo | null>(null);
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<Record<string, string>>({
         name: '',
         email: '',
         phone: '',
@@ -24,6 +25,9 @@ export default function SpotRegistrationPage({ params }: { params: Promise<{ id:
         guest_names: '',
         meal_preference: 'veg'
     });
+    const [customResponses, setCustomResponses] = useState<Record<string, string>>({});
+    const [formConfig, setFormConfig] = useState<FormField[]>([]);
+    const [configLoaded, setConfigLoaded] = useState(false);
 
     const [registeredUser, setRegisteredUser] = useState<{ id: string; name: string; guest_names?: string; channel?: string } | null>(null);
     const [loading, setLoading] = useState(false);
@@ -37,18 +41,33 @@ export default function SpotRegistrationPage({ params }: { params: Promise<{ id:
     const qrRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        // Fetch event info for display
-        fetch('/api/events')
+        // Fetch event info and config
+        fetch(`/api/events?id=${id}`)
             .then(res => res.json())
-            .then(events => {
-                const found = events.find((e: EventInfo) => e.id === id);
-                if (found) setEvent(found);
+            .then(event => {
+                if (event.id) {
+                    setEvent({ id: event.id, name: event.name, date: event.date });
+                    if (event.formConfig && event.formConfig.length > 0) {
+                        setFormConfig(event.formConfig);
+                    } else {
+                        setFormConfig(SYSTEM_FIELDS_DEFAULTS);
+                    }
+                }
+                setConfigLoaded(true);
             })
-            .catch(console.error);
+            .catch(err => {
+                console.error(err);
+                setFormConfig(SYSTEM_FIELDS_DEFAULTS);
+                setConfigLoaded(true);
+            });
     }, [id]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleCustomChange = (id: string, value: string) => {
+        setCustomResponses({ ...customResponses, [id]: value });
     };
 
     const handleRegister = async (e: React.FormEvent) => {
@@ -67,7 +86,8 @@ export default function SpotRegistrationPage({ params }: { params: Promise<{ id:
                 body: JSON.stringify({
                     ...formData,
                     eventId: id,
-                    category: formData.category || 'Spot Registration'
+                    category: formData.category || 'Spot Registration',
+                    customResponses
                 }),
             });
 
@@ -268,159 +288,225 @@ export default function SpotRegistrationPage({ params }: { params: Promise<{ id:
                         </div>
 
                         <form onSubmit={handleRegister} className="space-y-5">
-                            {/* Basic Info */}
-                            <div className="grid grid-cols-1 gap-4">
-                                <div>
-                                    <label className="text-sm font-medium text-white mb-1.5 block">Full Name *</label>
-                                    <div className="relative">
-                                        <UserPlus className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
-                                        <input
-                                            type="text"
-                                            name="name"
-                                            required
-                                            autoFocus
-                                            value={formData.name}
-                                            onChange={handleChange}
-                                            className="w-full bg-muted/50 border border-border rounded-xl pl-10 pr-4 py-3 text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all"
-                                            placeholder="Your Name"
-                                        />
-                                    </div>
+                            {!configLoaded ? (
+                                <div className="text-center py-10">
+                                    <Loader2 className="w-8 h-8 animate-spin mx-auto text-orange-500" />
                                 </div>
+                            ) : (
+                                <>
+                                    {/* Basic Info */}
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <div>
+                                            <label className="text-sm font-medium text-white mb-1.5 block">Full Name *</label>
+                                            <div className="relative">
+                                                <UserPlus className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
+                                                <input
+                                                    type="text"
+                                                    name="name"
+                                                    required
+                                                    autoFocus
+                                                    value={formData.name}
+                                                    onChange={handleChange}
+                                                    className="w-full bg-muted/50 border border-border rounded-xl pl-10 pr-4 py-3 text-white text-base focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                                                    placeholder="Your Name"
+                                                />
+                                            </div>
+                                        </div>
 
-                                <div>
-                                    <label className="text-sm font-medium text-white mb-1.5 block">Phone Number *</label>
-                                    <div className="relative">
-                                        <Phone className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
-                                        <input
-                                            type="tel"
-                                            name="phone"
-                                            required
-                                            value={formData.phone}
-                                            onChange={handleChange}
-                                            className="w-full bg-muted/50 border border-border rounded-xl pl-10 pr-4 py-3 text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all"
-                                            placeholder="+1 234 567 890"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium text-white mb-1.5 block">Email (Optional)</label>
-                                <div className="relative">
-                                    <FileText className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        value={formData.email}
-                                        onChange={handleChange}
-                                        className="w-full bg-muted/50 border border-border rounded-xl pl-10 pr-4 py-3 text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all"
-                                        placeholder="you@example.com"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Socials */}
-                            <div className="space-y-4 pt-2 border-t border-white/10">
-                                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Social Presence</h3>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                    <div>
-                                        <label className="text-xs font-medium text-white mb-1 block">Instagram Handle</label>
-                                        <div className="relative">
-                                            <Instagram className="absolute left-3 top-3.5 w-4 h-4 text-muted-foreground" />
-                                            <input
-                                                type="text"
-                                                name="instagram"
-                                                value={formData.instagram}
-                                                onChange={handleChange}
-                                                className="w-full bg-muted/50 border border-border rounded-lg pl-9 pr-3 py-3 text-sm text-white focus:ring-2 focus:ring-orange-500 outline-none"
-                                                placeholder="@username"
-                                            />
+                                        <div>
+                                            <label className="text-sm font-medium text-white mb-1.5 block">Phone Number *</label>
+                                            <div className="relative">
+                                                <Phone className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
+                                                <input
+                                                    type="tel"
+                                                    name="phone"
+                                                    required
+                                                    value={formData.phone}
+                                                    onChange={handleChange}
+                                                    className="w-full bg-muted/50 border border-border rounded-xl pl-10 pr-4 py-3 text-white text-base focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                                                    placeholder="+1 234 567 890"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div>
-                                        <label className="text-xs font-medium text-white mb-1 block">YouTube/Link</label>
+                                    {/* Dynamic Fields */}
+                                    {formConfig.map(field => {
+                                        if (!field.enabled) return null;
+
+                                        if (field.isSystem) {
+                                            if (field.id === 'email') {
+                                                return (
+                                                    <div key={field.id}>
+                                                        <label className="text-sm font-medium text-white mb-1.5 block">{field.label} {field.required && '*'}</label>
+                                                        <div className="relative">
+                                                            <FileText className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
+                                                            <input
+                                                                type="email"
+                                                                name="email"
+                                                                required={field.required}
+                                                                value={formData.email}
+                                                                onChange={handleChange}
+                                                                className="w-full bg-muted/50 border border-border rounded-xl pl-10 pr-4 py-3 text-white text-base focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                                                                placeholder="you@example.com"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                            if (field.id === 'instagram') {
+                                                return (
+                                                    <div key={field.id}>
+                                                        <label className="text-sm font-medium text-white mb-1.5 block">{field.label} {field.required && '*'}</label>
+                                                        <div className="relative">
+                                                            <Instagram className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
+                                                            <input
+                                                                type="text"
+                                                                name="instagram"
+                                                                required={field.required}
+                                                                value={formData.instagram}
+                                                                onChange={handleChange}
+                                                                className="w-full bg-muted/50 border border-border rounded-xl pl-10 pr-4 py-3 text-white text-base focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                                                                placeholder="@username"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                            if (field.id === 'youtube') {
+                                                return (
+                                                    <div key={field.id}>
+                                                        <label className="text-sm font-medium text-white mb-1.5 block">{field.label} {field.required && '*'}</label>
+                                                        <div className="relative">
+                                                            <Youtube className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
+                                                            <input
+                                                                type="text"
+                                                                name="youtube"
+                                                                required={field.required}
+                                                                value={formData.youtube}
+                                                                onChange={handleChange}
+                                                                className="w-full bg-muted/50 border border-border rounded-xl pl-10 pr-4 py-3 text-white text-base focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                                                                placeholder="Channel URL"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                            if (field.id === 'category') {
+                                                return (
+                                                    <div key={field.id}>
+                                                        <label className="text-sm font-medium text-white mb-1.5 block">{field.label} {field.required && '*'}</label>
+                                                        <div className="relative">
+                                                            <Tag className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
+                                                            <select
+                                                                name="category"
+                                                                required={field.required}
+                                                                value={formData.category}
+                                                                onChange={handleChange}
+                                                                className="w-full bg-muted/50 border border-border rounded-xl pl-10 pr-4 py-3 text-white text-base focus:ring-2 focus:ring-orange-500 outline-none appearance-none"
+                                                            >
+                                                                <option value="" className="bg-black">Select Category...</option>
+                                                                {field.options?.map(opt => (
+                                                                    <option key={opt} value={opt} className="bg-black">{opt}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                            if (field.id === 'meal_preference') {
+                                                return (
+                                                    <div key={field.id}>
+                                                        <label className="text-sm font-medium text-white mb-1.5 block">{field.label} {field.required && '*'}</label>
+                                                        <div className="relative">
+                                                            <Utensils className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
+                                                            <select
+                                                                name="meal_preference"
+                                                                required={field.required}
+                                                                value={formData.meal_preference}
+                                                                onChange={handleChange}
+                                                                className="w-full bg-muted/50 border border-border rounded-xl pl-10 pr-4 py-3 text-white text-base focus:ring-2 focus:ring-orange-500 outline-none appearance-none"
+                                                            >
+                                                                {field.options?.map(opt => (
+                                                                    <option key={opt} value={opt} className="bg-black">{opt === 'veg' ? '🥗 Vegetarian' : opt === 'non-veg' ? '🍗 Non-Vegetarian' : opt}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground mt-1.5">
+                                                            {formData.meal_preference === 'veg'
+                                                                ? '🟢 Veg meals include fresh veggies and paneer options'
+                                                                : '🔴 Non-veg meals include chicken and egg options'}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            }
+                                        }
+
+                                        // Custom Fields
+                                        return (
+                                            <div key={field.id}>
+                                                <label className="text-sm font-medium text-white mb-1.5 block">{field.label} {field.required && '*'}</label>
+
+                                                {field.type === 'select' ? (
+                                                    <select
+                                                        required={field.required}
+                                                        value={customResponses[field.id] || ''}
+                                                        onChange={(e) => handleCustomChange(field.id, e.target.value)}
+                                                        className="w-full bg-muted/50 border border-border rounded-xl px-4 py-3 text-white text-base focus:ring-2 focus:ring-orange-500 outline-none appearance-none"
+                                                    >
+                                                        <option value="" className="bg-black">Select...</option>
+                                                        {field.options?.map(opt => (
+                                                            <option key={opt} value={opt} className="bg-black">{opt}</option>
+                                                        ))}
+                                                    </select>
+                                                ) : field.type === 'checkbox' ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            required={field.required}
+                                                            checked={customResponses[field.id] === 'Yes'}
+                                                            onChange={(e) => handleCustomChange(field.id, e.target.checked ? 'Yes' : 'No')}
+                                                            className="w-5 h-5 rounded border-orange-600 bg-muted/50 text-orange-500 focus:ring-orange-500"
+                                                        />
+                                                        <span className="text-sm text-white">Yes, I agree</span>
+                                                    </div>
+                                                ) : (
+                                                    <input
+                                                        type={field.type === 'number' ? 'number' : field.type === 'email' ? 'email' : field.type === 'phone' ? 'tel' : 'text'}
+                                                        required={field.required}
+                                                        value={customResponses[field.id] || ''}
+                                                        onChange={(e) => handleCustomChange(field.id, e.target.value)}
+                                                        className="w-full bg-muted/50 border border-border rounded-xl px-4 py-3 text-white text-base focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                                                        placeholder={`Enter ${field.label}`}
+                                                    />
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+
+                                    {/* Guest */}
+                                    <div className="pt-2 border-t border-white/10">
+                                        <label className="text-sm font-medium text-white mb-1.5 block">Accompanying Person (1 allowed)</label>
                                         <div className="relative">
-                                            <Youtube className="absolute left-3 top-3.5 w-4 h-4 text-muted-foreground" />
+                                            <Users className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
                                             <input
                                                 type="text"
-                                                name="youtube"
-                                                value={formData.youtube}
+                                                name="guest_names"
+                                                value={formData.guest_names}
                                                 onChange={handleChange}
-                                                className="w-full bg-muted/50 border border-border rounded-lg pl-9 pr-3 py-3 text-sm text-white focus:ring-2 focus:ring-orange-500 outline-none"
-                                                placeholder="Channel URL"
+                                                className="w-full bg-muted/50 border border-border rounded-xl pl-10 pr-4 py-3 text-white text-base focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                                                placeholder="Guest name (optional)"
                                             />
                                         </div>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            Your guest will receive their own entry pass
+                                        </p>
+                                        <p className="text-xs text-yellow-500 mt-1 font-medium">
+                                            ⚠️ Guest will be charged ₹200
+                                        </p>
                                     </div>
-                                </div>
-
-                                <div>
-                                    <label className="text-xs font-medium text-white mb-1 block">Category</label>
-                                    <div className="relative">
-                                        <Tag className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                                        <select
-                                            name="category"
-                                            value={formData.category}
-                                            onChange={handleChange}
-                                            className="w-full bg-muted/50 border border-border rounded-lg pl-9 pr-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-orange-500 outline-none appearance-none"
-                                        >
-                                            <option value="" className="bg-black">Select Category...</option>
-                                            <option value="1m plus" className="bg-black">1M+ Followers</option>
-                                            <option value="500k to 1m" className="bg-black">500K - 1M Followers</option>
-                                            <option value="100k to 500k" className="bg-black">100K - 500K Followers</option>
-                                            <option value="10k to 100k" className="bg-black">10K - 100K Followers</option>
-                                            <option value="5k to 10k" className="bg-black">5K - 10K Followers</option>
-                                            <option value="Guest" className="bg-black">Guest (No Seat)</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Meal Preference */}
-                            <div className="pt-2 border-t border-white/10">
-                                <label className="text-sm font-medium text-white mb-1.5 block">Meal Preference *</label>
-                                <div className="relative">
-                                    <Utensils className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
-                                    <select
-                                        name="meal_preference"
-                                        value={formData.meal_preference}
-                                        onChange={handleChange}
-                                        required
-                                        className="w-full bg-muted/50 border border-border rounded-xl pl-10 pr-4 py-3 text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all appearance-none"
-                                    >
-                                        <option value="veg" className="bg-black">🥗 Vegetarian</option>
-                                        <option value="non-veg" className="bg-black">🍗 Non-Vegetarian</option>
-                                    </select>
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1.5">
-                                    {formData.meal_preference === 'veg'
-                                        ? '🟢 Veg meals include fresh veggies and paneer options'
-                                        : '🔴 Non-veg meals include chicken and egg options'}
-                                </p>
-                            </div>
-
-                            {/* Guest */}
-                            <div className="pt-2 border-t border-white/10">
-                                <label className="text-sm font-medium text-white mb-1.5 block">Accompanying Person (1 allowed)</label>
-                                <div className="relative">
-                                    <Users className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
-                                    <input
-                                        type="text"
-                                        name="guest_names"
-                                        value={formData.guest_names}
-                                        onChange={handleChange}
-                                        className="w-full bg-muted/50 border border-border rounded-xl pl-10 pr-4 py-3 text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all"
-                                        placeholder="Guest name (optional)"
-                                    />
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Your guest will receive their own entry pass
-                                </p>
-                                <p className="text-xs text-yellow-500 mt-1 font-medium">
-                                    ⚠️ Guest will be charged ₹200
-                                </p>
-                            </div>
+                                </>
+                            )}
 
                             {error && (
                                 <div className="text-red-400 text-sm bg-red-900/20 p-3 rounded-lg border border-red-900/50">

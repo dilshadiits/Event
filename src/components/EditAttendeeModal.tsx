@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
+
 import { X, Save, Plus, Loader2, Users } from 'lucide-react';
+import { FormField } from './FormBuilder';
 
 interface Attendee {
     id: string;
@@ -14,6 +16,7 @@ interface Attendee {
     category?: string;
     guest_names?: string;
     meal_preference?: 'veg' | 'non-veg';
+    customResponses?: Record<string, string>;
     status: 'registered' | 'checked-in';
     checked_in_at: string | null;
     created_at: string;
@@ -24,9 +27,10 @@ interface EditAttendeeModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (updatedAttendee: Attendee) => void;
+    fields?: FormField[]; // Pass form config to know labels and types
 }
 
-export default function EditAttendeeModal({ attendee, isOpen, onClose, onSave }: EditAttendeeModalProps) {
+export default function EditAttendeeModal({ attendee, isOpen, onClose, onSave, fields = [] }: EditAttendeeModalProps) {
     const [formData, setFormData] = useState({
         name: '',
         additionalName: '',
@@ -38,6 +42,7 @@ export default function EditAttendeeModal({ attendee, isOpen, onClose, onSave }:
         category: '',
         guest_names: '',
         meal_preference: 'veg' as 'veg' | 'non-veg',
+        customResponses: {} as Record<string, string>,
     });
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
@@ -56,6 +61,7 @@ export default function EditAttendeeModal({ attendee, isOpen, onClose, onSave }:
                 category: attendee.category || '',
                 guest_names: attendee.guest_names || '',
                 meal_preference: attendee.meal_preference || 'veg',
+                customResponses: attendee.customResponses || {},
             });
             setError('');
         }
@@ -137,7 +143,7 @@ export default function EditAttendeeModal({ attendee, isOpen, onClose, onSave }:
                             type="text"
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white text-base focus:ring-2 focus:ring-blue-500 outline-none"
                         />
                     </div>
 
@@ -148,7 +154,7 @@ export default function EditAttendeeModal({ attendee, isOpen, onClose, onSave }:
                             type="text"
                             value={formData.additionalName}
                             onChange={(e) => setFormData({ ...formData, additionalName: e.target.value })}
-                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white text-base focus:ring-2 focus:ring-blue-500 outline-none"
                             placeholder="e.g. Spouse, Partner"
                         />
                     </div>
@@ -160,7 +166,7 @@ export default function EditAttendeeModal({ attendee, isOpen, onClose, onSave }:
                             type="text"
                             value={formData.seatingNumber}
                             onChange={(e) => setFormData({ ...formData, seatingNumber: e.target.value })}
-                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white text-base focus:ring-2 focus:ring-blue-500 outline-none"
                             placeholder="e.g. A-12"
                         />
                     </div>
@@ -172,7 +178,7 @@ export default function EditAttendeeModal({ attendee, isOpen, onClose, onSave }:
                             type="tel"
                             value={formData.phone}
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white text-base focus:ring-2 focus:ring-blue-500 outline-none"
                         />
                     </div>
 
@@ -183,7 +189,7 @@ export default function EditAttendeeModal({ attendee, isOpen, onClose, onSave }:
                             type="email"
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white text-base focus:ring-2 focus:ring-blue-500 outline-none"
                         />
                     </div>
 
@@ -194,7 +200,7 @@ export default function EditAttendeeModal({ attendee, isOpen, onClose, onSave }:
                             type="text"
                             value={formData.instagram}
                             onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
-                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white text-base focus:ring-2 focus:ring-blue-500 outline-none"
                         />
                     </div>
 
@@ -205,7 +211,7 @@ export default function EditAttendeeModal({ attendee, isOpen, onClose, onSave }:
                             type="text"
                             value={formData.youtube}
                             onChange={(e) => setFormData({ ...formData, youtube: e.target.value })}
-                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white text-base focus:ring-2 focus:ring-blue-500 outline-none"
                         />
                     </div>
 
@@ -215,7 +221,7 @@ export default function EditAttendeeModal({ attendee, isOpen, onClose, onSave }:
                         <select
                             value={formData.category}
                             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white text-base focus:ring-2 focus:ring-blue-500 outline-none"
                         >
                             <option value="">Select Category</option>
                             <option value="5k to 10k">5k to 10k</option>
@@ -233,7 +239,7 @@ export default function EditAttendeeModal({ attendee, isOpen, onClose, onSave }:
                         <select
                             value={formData.meal_preference}
                             onChange={(e) => setFormData({ ...formData, meal_preference: e.target.value as 'veg' | 'non-veg' })}
-                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white text-base focus:ring-2 focus:ring-blue-500 outline-none"
                         >
                             <option value="veg">Vegetarian</option>
                             <option value="non-veg">Non-Vegetarian</option>
@@ -275,7 +281,7 @@ export default function EditAttendeeModal({ attendee, isOpen, onClose, onSave }:
                                 onChange={(e) => setNewGuest(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addGuest())}
                                 placeholder="Add guest name..."
-                                className="flex-1 bg-muted/50 border border-border rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                className="flex-1 bg-muted/50 border border-border rounded-lg px-4 py-2 text-white text-base focus:ring-2 focus:ring-blue-500 outline-none"
                             />
                             <button
                                 onClick={addGuest}
@@ -287,6 +293,43 @@ export default function EditAttendeeModal({ attendee, isOpen, onClose, onSave }:
                     </div>
                 </div>
 
+                {/* Custom Fields Section */}
+                {fields.filter(f => !f.isSystem && f.enabled).length > 0 && (
+                    <div className="border-t border-border pt-4 space-y-4">
+                        <h3 className="text-sm font-semibold text-white">Custom Details</h3>
+                        {fields.filter(f => !f.isSystem && f.enabled).map(field => (
+                            <div key={field.id}>
+                                <label className="block text-sm text-muted-foreground mb-1">{field.label}</label>
+                                {field.type === 'select' ? (
+                                    <select
+                                        value={formData.customResponses[field.id] || ''}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            customResponses: { ...formData.customResponses, [field.id]: e.target.value }
+                                        })}
+                                        className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white text-base focus:ring-2 focus:ring-blue-500 outline-none"
+                                    >
+                                        <option value="">Select...</option>
+                                        {field.options?.map(opt => (
+                                            <option key={opt} value={opt}>{opt}</option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <input
+                                        type="text"
+                                        value={formData.customResponses[field.id] || ''}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            customResponses: { ...formData.customResponses, [field.id]: e.target.value }
+                                        })}
+                                        className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-white text-base focus:ring-2 focus:ring-blue-500 outline-none"
+                                        placeholder={field.type === 'checkbox' ? 'Yes/No' : ''}
+                                    />
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
                 {/* Actions */}
                 <div className="flex gap-3 mt-6">
                     <button

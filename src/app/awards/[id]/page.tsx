@@ -783,7 +783,7 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                     <h2 className="font-bold text-white">Award Recipients & Tokens</h2>
                 </div>
 
-                <div className="flex flex-col md:flex-row gap-4 mb-6 items-end">
+                <div className="flex flex-col md:flex-row gap-6 mb-6 items-end">
                     <div className="flex-1 space-y-2 w-full">
                         <label className="text-sm text-muted-foreground block">
                             Upload Excel (Columns: &quot;Name&quot;, &quot;Follower Count&quot;, &quot;Ticket Number&quot;)
@@ -792,12 +792,12 @@ export default function AwardEventPage({ params }: { params: Promise<{ id: strin
                             type="file"
                             accept=".xlsx, .xls"
                             onChange={(e) => setRecipientFile(e.target.files?.[0] || null)}
-                            className="block w-full text-sm text-slate-500
+                            className="block w-full text-base text-slate-500
                                 file:mr-4 file:py-2 file:px-4
                                 file:rounded-full file:border-0
                                 file:text-sm file:font-semibold
-                                file:bg-purple-50, file:text-purple-700
-                                hover:file:bg-purple-100"
+                                file:bg-purple-50 file:text-purple-700
+                                hover:file:bg-purple-100 cursor-pointer"
                         />
                     </div>
                     <button
