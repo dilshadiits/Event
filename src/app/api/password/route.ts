@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
         const { password } = body;
 
         // Get the admin password from environment
-        const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+        const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'super123';
 
         if (password === ADMIN_PASSWORD) {
             return NextResponse.json({ success: true });
