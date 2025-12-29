@@ -135,7 +135,7 @@ export default function Home() {
           </Link>
           <button
             onClick={() => {
-              localStorage.removeItem('app_auth_token');
+              localStorage.removeItem('admin_session_v2');
               window.dispatchEvent(new Event('storage'));
               window.location.reload();
             }}
