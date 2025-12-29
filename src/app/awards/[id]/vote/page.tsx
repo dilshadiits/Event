@@ -268,7 +268,7 @@ export default function AwardVotePage({ params }: { params: Promise<{ id: string
                         >
                             Start Voting
                         </button>
-                        <button onClick={() => signOut()} className="w-full flex items-center justify-center gap-2 text-muted-foreground hover:text-white text-sm">
+                        <button onClick={() => signOut({ callbackUrl: '/' })} className="w-full flex items-center justify-center gap-2 text-muted-foreground hover:text-white text-sm">
                             <LogOut className="w-4 h-4" /> Sign out
                         </button>
                     </div>

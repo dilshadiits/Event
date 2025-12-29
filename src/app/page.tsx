@@ -137,6 +137,7 @@ export default function Home() {
             onClick={() => {
               localStorage.removeItem('app_auth_token');
               window.dispatchEvent(new Event('storage'));
+              window.location.reload();
             }}
             className="flex items-center justify-center gap-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 px-3 sm:px-4 py-2.5 sm:py-3 rounded-full transition-all border border-red-500/30 font-medium text-sm sm:text-base"
             title="Logout"
