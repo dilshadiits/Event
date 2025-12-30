@@ -86,7 +86,23 @@ export default function QRCodeModal({ value, name, eventName, isOpen, onClose, t
         };
 
         templateImg.onerror = () => {
-            console.error('Failed to load template image');
+            console.warn('Failed to load template image, falling back to plain QR');
+            // Fallback: Clear canvas and just draw QR code
+            canvas.width = 300;
+            canvas.height = 300;
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, 300, 300);
+
+            // Draw QR centered
+            ctx.drawImage(qrCanvas, 25, 25, 250, 250); // 300 - 50 margin
+
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(name, 150, 290);
+
+            const dataUrl = canvas.toDataURL('image/png');
+            setEntryPassDataUrl(dataUrl);
             setIsGenerating(false);
         };
     };

@@ -47,6 +47,7 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
     const [entryPassImage, setEntryPassImage] = useState('');
     const [isSavingSettings, setIsSavingSettings] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
 
     // Modal State
     const [selectedAttendee, setSelectedAttendee] = useState<Attendee | null>(null);
@@ -157,6 +158,34 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
         }
     };
 
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploadingImage(true);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const res = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await res.json();
+
+            if (res.ok && data.url) {
+                setEntryPassImage(data.url);
+            } else {
+                alert('Image upload failed');
+            }
+        } catch (err) {
+            console.error('Upload error:', err);
+            alert('Error uploading image');
+        } finally {
+            setUploadingImage(false);
+        }
+    };
+
     const toggleRegistration = async () => {
         if (!confirm(registrationOpen
             ? 'Stop registration? This will finalize all seat numbers in order.'
@@ -221,6 +250,11 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
     const generateAllQRCodes = async () => {
         if (attendees.length === 0) return;
 
+        if (!entryPassImage) {
+            alert('Please upload an Entry Pass Template in Event Settings before generating tickets.');
+            return;
+        }
+
         setIsGeneratingAll(true);
         setGenerationProgress({ current: 0, total: attendees.length });
 
@@ -228,7 +262,7 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
             // Load template image
             const templateImg = new Image();
             templateImg.crossOrigin = 'anonymous';
-            templateImg.src = '/entry-pass-template.jpg';
+            templateImg.src = entryPassImage || '/entry-pass-template.jpg';
 
             await new Promise((resolve, reject) => {
                 templateImg.onload = resolve;
@@ -585,23 +619,66 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                     <div className="space-y-4">
                         <div>
                             <label className="text-sm font-medium text-muted-foreground mb-1 block">
-                                Custom Entry Pass Template URL
+                                Custom Entry Pass Template
                             </label>
-                            <input
-                                type="url"
-                                value={entryPassImage}
-                                onChange={(e) => setEntryPassImage(e.target.value)}
-                                placeholder="https://example.com/template.jpg"
-                                className="w-full bg-muted/50 border border-border rounded-xl px-4 py-2 text-white outline-none focus:ring-2 focus:ring-purple-500"
-                            />
+                            <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageUpload}
+                                        className="hidden"
+                                        id="entryPassUpload"
+                                        disabled={uploadingImage}
+                                    />
+                                    <label
+                                        htmlFor="entryPassUpload"
+                                        className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-colors ${uploadingImage
+                                            ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                                            : 'bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 border border-blue-500/30'
+                                            }`}
+                                    >
+                                        {uploadingImage ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                Uploading...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Download className="w-4 h-4 rotate-180" /> {/* Reuse Download icon rotated for upload feel */}
+                                                Upload Image
+                                            </>
+                                        )}
+                                    </label>
+                                    <span className="text-xs text-muted-foreground">
+                                        or use URL
+                                    </span>
+                                </div>
+                                <input
+                                    type="url"
+                                    value={entryPassImage}
+                                    onChange={(e) => setEntryPassImage(e.target.value)}
+                                    placeholder="https://example.com/template.jpg"
+                                    className="w-full bg-muted/50 border border-border rounded-xl px-4 py-2 text-white outline-none focus:ring-2 focus:ring-purple-500"
+                                />
+                            </div>
                             <p className="text-xs text-muted-foreground mt-1">
-                                Provide a URL for the background image of the entry pass.
+                                Upload a background image for the entry pass (JPG/PNG).
                             </p>
                         </div>
                         {entryPassImage && (
-                            <div className="mt-2">
+                            <div className="mt-2 relative group">
                                 <p className="text-xs text-muted-foreground mb-1">Preview:</p>
-                                <img src={entryPassImage} alt="Entry Pass Template" className="h-40 object-contain rounded border border-border" />
+                                <div className="relative inline-block">
+                                    <img src={entryPassImage} alt="Entry Pass Template" className="h-40 object-contain rounded border border-border" />
+                                    <button
+                                        onClick={() => setEntryPassImage('')}
+                                        className="absolute top-2 right-2 bg-red-600/90 hover:bg-red-700 text-white p-1.5 rounded-full shadow-lg transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                        title="Remove Image"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
