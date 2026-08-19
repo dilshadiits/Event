@@ -20,8 +20,25 @@ export async function POST(req: Request) {
         const isOldGuestFormat = scanData.includes('-GUEST-');
         const isNewGuestFormat = scanData.includes('_guest_');
         const isGuestQR = isOldGuestFormat || isNewGuestFormat;
-        let attendeeId = scanData;
+        
+        // Handle full URLs from older QR codes (extract ID)
+        let rawData = scanData.trim();
+        try {
+            if (rawData.startsWith('http://') || rawData.startsWith('https://')) {
+                const url = new URL(rawData);
+                const idParam = url.searchParams.get('id');
+                const eventIdParam = url.searchParams.get('eventId');
+                if (idParam) {
+                    rawData = idParam;
+                }
+            }
+        } catch (e) {
+            // Ignore URL parsing errors
+        }
+
+        let attendeeId = rawData;
         let guestName = '';
+
 
         if (isOldGuestFormat) {
             const parts = scanData.split('-GUEST-');

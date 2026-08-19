@@ -98,8 +98,15 @@ function ScanContent() {
                             )}
                         </div>
 
-                        <h2 className="text-4xl font-bold text-white mb-2">
-                            {scanResult.success ? 'Access Granted' : scanResult.message?.toLowerCase().includes('already') ? 'Already Checked In' : 'Access Denied'}
+                        <h2 className="text-3xl md:text-4xl font-bold text-white mb-2 leading-tight">
+                            {scanResult.success 
+                                ? 'Access Granted' 
+                                : scanResult.message?.toLowerCase().includes('already') 
+                                    ? 'Already Checked In' 
+                                    : scanResult.message?.includes('Invalid QR') 
+                                        ? 'Invalid QR Code'
+                                        : 'Access Denied'
+                            }
                         </h2>
 
                         <p className="text-xl text-white/80 mb-8 font-medium">
