@@ -2,7 +2,7 @@
 'use client';
 import { useState, useEffect, use, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Search, QrCode, CheckCircle, Instagram, Phone, Users, Link as LinkIcon, Check, Trash2, Zap, RefreshCw, Edit, Download, Loader2, SortDesc, Play, Square, Settings } from 'lucide-react';
+import { ArrowLeft, Search, QrCode, CheckCircle, Instagram, Phone, Users, Link as LinkIcon, Check, Trash2, Zap, RefreshCw, Edit, Download, Loader2, SortDesc, Play, Square, Settings, MessageCircle } from 'lucide-react';
 import QRCodeModal from '@/components/QRCodeModal';
 import EditAttendeeModal from '@/components/EditAttendeeModal';
 import FormBuilder, { FormField } from '@/components/FormBuilder';
@@ -452,6 +452,36 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
         }
     };
 
+    const handleSendWhatsApp = (attendee: Attendee) => {
+        if (!attendee.phone) {
+            alert('No phone number provided for this attendee.');
+            return;
+        }
+        
+        let phone = attendee.phone.replace(/\D/g, '');
+        if (phone.length === 10) {
+            phone = '91' + phone;
+        }
+
+        const passUrl = `${window.location.origin}/pass/${attendee.id}`;
+        let message = `Hello ${attendee.name},\n\nYour entry pass for ${eventName} is ready!\n\nYou can view and download your pass`;
+        if (attendee.guest_names) {
+            message += ` (and your accompanying guest's pass)`;
+        }
+        message += ` here: ${passUrl}\n\nPlease show this pass at the entrance.`;
+        
+        const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+        window.open(waUrl, '_blank');
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            </div>
+        );
+    }
+
     return (
         <main className="min-h-screen p-4 md:p-8 max-w-6xl mx-auto space-y-6 md:space-y-8">
             {/* Details Header */}
@@ -825,6 +855,13 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                                             title="Edit Attendee"
                                         >
                                             <Edit className="w-6 h-6" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleSendWhatsApp(attendee)}
+                                            className="p-2 text-muted-foreground hover:text-green-400 hover:bg-green-500/10 rounded-lg transition-all"
+                                            title="Send Pass via WhatsApp"
+                                        >
+                                            <MessageCircle className="w-6 h-6" />
                                         </button>
                                         <button
                                             onClick={() => setSelectedAttendee(attendee)}
