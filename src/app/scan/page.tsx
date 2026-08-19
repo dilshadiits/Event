@@ -105,7 +105,9 @@ function ScanContent() {
                                     ? 'Already Checked In' 
                                     : scanResult.message?.includes('Invalid QR') 
                                         ? 'Invalid QR Code'
-                                        : 'Access Denied'
+                                        : scanResult.message?.includes('belongs to event ID')
+                                            ? 'Wrong Event'
+                                            : 'Access Denied'
                             }
                         </h2>
 

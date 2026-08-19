@@ -72,11 +72,15 @@ export async function POST(req: Request) {
         }
 
         // Verify Event ID match (if provided)
-        if (eventId && attendee.eventId.toString() !== eventId) {
-            return successResponse({
-                success: false,
-                message: 'Error: This ticket belongs to a different event.'
-            });
+        if (eventId) {
+            const cleanEventId = String(eventId).trim();
+            const attendeeEventId = String(attendee.eventId).trim();
+            if (attendeeEventId !== cleanEventId) {
+                return successResponse({
+                    success: false,
+                    message: `Error: Ticket belongs to event ID ${attendeeEventId}, but scanner is set to ${cleanEventId}.`
+                });
+            }
         }
 
         // For guest QR codes, verify the attendee has a guest registered
