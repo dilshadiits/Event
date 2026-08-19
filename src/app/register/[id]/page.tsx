@@ -5,6 +5,7 @@ import QRCode from 'qrcode';
 import { useSearchParams } from 'next/navigation';
 import { Download, CheckCircle, UserPlus, FileText, Phone, Instagram, Youtube, Users, Tag, Utensils, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { FormField, SYSTEM_FIELDS_DEFAULTS } from '@/components/FormBuilder';
+import { loadImage, compositeOverlays, downloadDataUrl, type Overlay } from '@/lib/certificateGen';
 
 export default function RegistrationPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
@@ -24,6 +25,7 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
     const [customResponses, setCustomResponses] = useState<Record<string, string>>({});
     const [formConfig, setFormConfig] = useState<FormField[]>([]);
     const [configLoaded, setConfigLoaded] = useState(false);
+    const [entryPassImage, setEntryPassImage] = useState('');
 
     const [registeredUser, setRegisteredUser] = useState<{ id: string; name: string; guest_names?: string; channel?: string } | null>(null);
     const [loading, setLoading] = useState(false);
@@ -45,6 +47,7 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
                 } else {
                     setFormConfig(SYSTEM_FIELDS_DEFAULTS);
                 }
+                if (data.entryPassImage) setEntryPassImage(data.entryPassImage);
                 setConfigLoaded(true);
             })
             .catch(err => {
@@ -104,73 +107,58 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [registeredUser]);
 
-    const generateSinglePass = (name: string, qrValue: string, isGuest: boolean, channel?: string): Promise<string> => {
-        return new Promise((resolve, reject) => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                reject('Canvas context not available');
-                return;
-            }
-
-            const templateImg = new Image();
-            templateImg.crossOrigin = 'anonymous';
-            templateImg.src = '/entry-pass-template.jpg';
-
-            templateImg.onload = () => {
-                canvas.width = templateImg.width;
-                canvas.height = templateImg.height;
-                ctx.drawImage(templateImg, 0, 0);
-
-                // Generate QR code for this pass
-                const tempQrCanvas = document.createElement('canvas');
-                QRCode.toCanvas(tempQrCanvas, qrValue, {
-                    width: 300,
-                    margin: 0,
-                    errorCorrectionLevel: 'H'
-                }, (error: Error | null | undefined) => {
-                    if (error) {
-                        reject(error);
-                        return;
-                    }
-
-                    const qrSize = Math.min(templateImg.width * 0.38, templateImg.height * 0.22);
-                    const qrX = (templateImg.width - qrSize) / 2;
-                    const qrY = templateImg.height * 0.48;
-
-                    // Draw white background (larger to fit channel name)
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.fillRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 80);
-
-                    // Draw QR code
-                    ctx.drawImage(tempQrCanvas, qrX, qrY, qrSize, qrSize);
-
-                    // Add name
-                    ctx.fillStyle = '#000000';
-                    ctx.font = `bold ${Math.floor(qrSize * 0.11)}px Arial`;
-                    ctx.textAlign = 'center';
-                    ctx.fillText(name.toUpperCase(), templateImg.width / 2, qrY + qrSize + 25);
-
-                    // Add channel name in brackets below the name (for main attendee only)
-                    if (!isGuest && channel) {
-                        ctx.font = `${Math.floor(qrSize * 0.08)}px Arial`;
-                        ctx.fillStyle = '#444444';
-                        ctx.fillText(`(${channel})`, templateImg.width / 2, qrY + qrSize + 45);
-                    }
-
-                    // Add guest label if applicable
-                    if (isGuest) {
-                        ctx.font = `${Math.floor(qrSize * 0.08)}px Arial`;
-                        ctx.fillStyle = '#666666';
-                        ctx.fillText('(ACCOMPANYING GUEST)', templateImg.width / 2, qrY + qrSize + 45);
-                    }
-
-                    resolve(canvas.toDataURL('image/png'));
-                });
-            };
-
-            templateImg.onerror = () => reject('Failed to load template');
+    const generateSinglePass = async (name: string, qrValue: string, isGuest: boolean, channel?: string): Promise<string> => {
+        // Render the QR code to an offscreen canvas first — needed as an overlay
+        // image regardless of which template path below ends up being used.
+        const qrCanvas = document.createElement('canvas');
+        await new Promise<void>((resolve, reject) => {
+            QRCode.toCanvas(qrCanvas, qrValue, { width: 300, margin: 0, errorCorrectionLevel: 'H' }, (error: Error | null | undefined) => {
+                if (error) reject(error); else resolve();
+            });
         });
+
+        const canvas = document.createElement('canvas');
+
+        // Use the event's uploaded template if one exists; otherwise fall back to a
+        // plain white QR card — same graceful-degradation behavior as QRCodeModal,
+        // rather than failing the whole registration flow when no template is set.
+        let template: HTMLImageElement | null = null;
+        if (entryPassImage) {
+            try {
+                template = await loadImage(entryPassImage);
+            } catch {
+                template = null;
+            }
+        }
+
+        if (template) {
+            const qrSize = Math.min(template.width * 0.38, template.height * 0.22);
+            const qrX = (template.width - qrSize) / 2;
+            const qrY = template.height * 0.48;
+
+            const overlays: Overlay[] = [
+                { type: 'rect', x: qrX - 10, y: qrY - 10, width: qrSize + 20, height: qrSize + 80, color: '#FFFFFF' },
+                { type: 'image', x: qrX, y: qrY, width: qrSize, height: qrSize, source: qrCanvas },
+                { type: 'text', x: template.width / 2, y: qrY + qrSize + 25, text: name.toUpperCase(), font: `bold ${Math.floor(qrSize * 0.11)}px Arial`, color: '#000000', align: 'center' },
+            ];
+            if (!isGuest && channel) {
+                overlays.push({ type: 'text', x: template.width / 2, y: qrY + qrSize + 45, text: `(${channel})`, font: `${Math.floor(qrSize * 0.08)}px Arial`, color: '#444444', align: 'center' });
+            }
+            if (isGuest) {
+                overlays.push({ type: 'text', x: template.width / 2, y: qrY + qrSize + 45, text: '(ACCOMPANYING GUEST)', font: `${Math.floor(qrSize * 0.08)}px Arial`, color: '#666666', align: 'center' });
+            }
+            compositeOverlays(canvas, template, overlays);
+        } else {
+            canvas.width = 300;
+            canvas.height = 300;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('Canvas 2D context unavailable');
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, 300, 300);
+            ctx.drawImage(qrCanvas, 0, 0, 300, 300);
+        }
+
+        return canvas.toDataURL('image/png');
     };
 
     const generateAllEntryPasses = async () => {
@@ -211,24 +199,14 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
     const downloadCurrentPass = () => {
         const currentPass = entryPasses[currentPassIndex];
         if (currentPass) {
-            const downloadLink = document.createElement('a');
-            downloadLink.href = currentPass.dataUrl;
-            downloadLink.download = `${currentPass.name.replace(/\s+/g, '_')}_Entry_Pass.png`;
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
+            downloadDataUrl(currentPass.dataUrl, `${currentPass.name.replace(/\s+/g, '_')}_Entry_Pass.png`);
         }
     };
 
     const downloadAllPasses = () => {
         entryPasses.forEach((pass, index) => {
             setTimeout(() => {
-                const downloadLink = document.createElement('a');
-                downloadLink.href = pass.dataUrl;
-                downloadLink.download = `${pass.name.replace(/\s+/g, '_')}_Entry_Pass.png`;
-                document.body.appendChild(downloadLink);
-                downloadLink.click();
-                document.body.removeChild(downloadLink);
+                downloadDataUrl(pass.dataUrl, `${pass.name.replace(/\s+/g, '_')}_Entry_Pass.png`);
             }, index * 500); // Stagger downloads by 500ms
         });
     };

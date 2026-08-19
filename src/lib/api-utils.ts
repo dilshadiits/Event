@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 // Standardized error response
 export function errorResponse(message: string, status: number = 500) {
@@ -77,6 +79,26 @@ export function checkRateLimit(
 
     record.count++;
     return { allowed: true, remaining: maxRequests - record.count };
+}
+
+// Require the current session to have one of the given roles.
+// Returns the session's user on success, or null if unauthenticated/unauthorized
+// (caller should respond with errorResponse('Unauthorized', 401/403) in that case).
+export async function requireRole(roles: string[]) {
+    const session = await getServerSession(authOptions);
+    const role = session?.user?.role;
+    if (!role || !roles.includes(role)) return null;
+    return session.user;
+}
+
+// Require the current session to be a super-admin, or an event-admin scoped to the
+// given fest (via User.festIds). Returns the session's user on success, or null.
+export async function requireFestAccess(festId: string) {
+    const user = await requireRole(['super-admin', 'event-admin']);
+    if (!user) return null;
+    if (user.role === 'super-admin') return user;
+    if (user.festIds?.includes(festId)) return user;
+    return null;
 }
 
 // Get client IP from request

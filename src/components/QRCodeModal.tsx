@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { X, Download, Loader2 } from 'lucide-react';
+import { loadImage, compositeOverlays, buildEntryPassOverlays, downloadDataUrl } from '@/lib/certificateGen';
 
 interface QRCodeModalProps {
     value: string;
@@ -10,9 +11,14 @@ interface QRCodeModalProps {
     isOpen: boolean;
     onClose: () => void;
     templateUrl?: string;
+    // When false, the participant's name is neither printed on the composited card nor
+    // shown in this modal — used for blind-judging chest cards, which must stay as
+    // anonymous as the judge's own scoring screen.
+    showName?: boolean;
+    downloadLabel?: string;
 }
 
-export default function QRCodeModal({ value, name, eventName, isOpen, onClose, templateUrl = '/entry-pass-template.jpg' }: QRCodeModalProps) {
+export default function QRCodeModal({ value, name, eventName, isOpen, onClose, templateUrl = '/entry-pass-template.jpg', showName = true, downloadLabel = 'Entry_Pass' }: QRCodeModalProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const qrRef = useRef<HTMLDivElement>(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -46,46 +52,13 @@ export default function QRCodeModal({ value, name, eventName, isOpen, onClose, t
             return;
         }
 
-        // Load the template image
-        const templateImg = new Image();
-        templateImg.crossOrigin = 'anonymous';
-        templateImg.src = templateUrl || '/entry-pass-template.jpg';
+        const label = showName ? name : '';
 
-        templateImg.onload = () => {
-            // Set canvas size to match template
-            canvas.width = templateImg.width;
-            canvas.height = templateImg.height;
-
-            // Draw the template
-            ctx.drawImage(templateImg, 0, 0);
-
-            // Calculate QR code position (center of the white box area)
-            // The white box is approximately in the center of the template
-            // Based on the template, the white box starts around 22% from left and 47% from top
-            const qrSize = Math.min(templateImg.width * 0.38, templateImg.height * 0.22);
-            const qrX = (templateImg.width - qrSize) / 2;
-            const qrY = templateImg.height * 0.48;
-
-            // Draw white background for QR code
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 50);
-
-            // Draw the QR code
-            ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
-
-            // Add the name below the QR code
-            ctx.fillStyle = '#000000';
-            ctx.font = `bold ${Math.floor(qrSize * 0.12)}px Arial`;
-            ctx.textAlign = 'center';
-            ctx.fillText(name.toUpperCase(), templateImg.width / 2, qrY + qrSize + 30);
-
-            // Generate the data URL
-            const dataUrl = canvas.toDataURL('image/png');
-            setEntryPassDataUrl(dataUrl);
-            setIsGenerating(false);
-        };
-
-        templateImg.onerror = () => {
+        try {
+            const templateImg = await loadImage(templateUrl || '/entry-pass-template.jpg');
+            compositeOverlays(canvas, templateImg, buildEntryPassOverlays(templateImg, qrCanvas, label));
+            setEntryPassDataUrl(canvas.toDataURL('image/png'));
+        } catch {
             console.warn('Failed to load template image, falling back to plain QR');
             // Fallback: Clear canvas and just draw QR code
             canvas.width = 300;
@@ -96,27 +69,24 @@ export default function QRCodeModal({ value, name, eventName, isOpen, onClose, t
             // Draw QR centered
             ctx.drawImage(qrCanvas, 25, 25, 250, 250); // 300 - 50 margin
 
-            ctx.fillStyle = '#000000';
-            ctx.font = 'bold 16px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(name, 150, 290);
+            if (label) {
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(label, 150, 290);
+            }
 
-            const dataUrl = canvas.toDataURL('image/png');
-            setEntryPassDataUrl(dataUrl);
+            setEntryPassDataUrl(canvas.toDataURL('image/png'));
+        } finally {
             setIsGenerating(false);
-        };
+        }
     };
 
     if (!isOpen) return null;
 
     const downloadEntryPass = () => {
         if (entryPassDataUrl) {
-            const downloadLink = document.createElement('a');
-            downloadLink.href = entryPassDataUrl;
-            downloadLink.download = `${name.replace(/\s+/g, '_')}_Entry_Pass.png`;
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
+            downloadDataUrl(entryPassDataUrl, `${(showName ? name : value).replace(/\s+/g, '_')}_${downloadLabel}.png`);
         }
     };
 
@@ -132,7 +102,7 @@ export default function QRCodeModal({ value, name, eventName, isOpen, onClose, t
 
                 <div className="text-center space-y-4">
                     <div>
-                        <h3 className="text-xl md:text-2xl font-bold text-white mb-1">{name}</h3>
+                        <h3 className="text-xl md:text-2xl font-bold text-white mb-1">{showName ? name : 'Chest Card'}</h3>
                         <p className="text-blue-400 font-medium text-sm md:text-base">{eventName}</p>
                     </div>
 

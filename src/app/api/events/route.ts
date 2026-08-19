@@ -24,6 +24,7 @@ export async function GET(req: Request) {
                 date: event.date,
                 registrationOpen: event.registrationOpen ?? true,
                 formConfig: event.formConfig || [],
+                entryPassImage: event.entryPassImage,
                 created_at: event.created_at
             });
         }
@@ -180,12 +181,18 @@ export async function PUT(req: Request) {
 
         await event.save();
 
+        const message = registrationOpen === undefined
+            ? 'Event updated'
+            : registrationOpen
+                ? 'Registration opened'
+                : 'Registration closed and seats finalized';
+
         return successResponse({
             id: event._id.toString(),
             name: event.name,
             date: event.date,
             registrationOpen: event.registrationOpen,
-            message: registrationOpen ? 'Registration opened' : 'Registration closed and seats finalized'
+            message,
         });
     } catch (error) {
         console.error('[Events PUT]', error);

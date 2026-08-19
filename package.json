@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@types/qrcode": "^1.5.6",
+    "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "html5-qrcode": "^2.3.8",
     "jspdf": "^3.0.4",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

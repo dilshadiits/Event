@@ -51,8 +51,10 @@
     /* Mobile optimizations */
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
-    /* Prevent pull-to-refresh on mobile */
-    overscroll-behavior-y: contain;
+    /* Prevent pull-to-refresh on mobile, and stop Chrome's swipe-back/forward
+       navigation gesture from hijacking trackpad scrolls that drift slightly
+       off-vertical (a common "scrolling suddenly stops working" complaint). */
+    overscroll-behavior: contain;
   }
 
   /* Safe area support for notched phones */
@@ -169,6 +171,7 @@ html,
 body {
   overflow-x: hidden;
   max-width: 100vw;
+  overscroll-behavior: contain;
 }
 
 /* Ensure proper viewport height on mobile browsers */

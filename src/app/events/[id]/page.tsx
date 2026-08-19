@@ -9,6 +9,7 @@ import FormBuilder, { FormField } from '@/components/FormBuilder';
 import { QRCodeCanvas } from 'qrcode.react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { loadImage, compositeOverlays, buildEntryPassOverlays, downloadCanvasAsPng } from '@/lib/certificateGen';
 
 interface Attendee {
     id: string;
@@ -259,25 +260,11 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
         setGenerationProgress({ current: 0, total: attendees.length });
 
         try {
-            // Load template image
-            const templateImg = new Image();
-            templateImg.crossOrigin = 'anonymous';
-            templateImg.src = entryPassImage || '/entry-pass-template.jpg';
-
-            await new Promise((resolve, reject) => {
-                templateImg.onload = resolve;
-                templateImg.onerror = reject;
-            });
+            const templateImg = await loadImage(entryPassImage || '/entry-pass-template.jpg');
 
             for (let i = 0; i < attendees.length; i++) {
                 const attendee = attendees[i];
                 setGenerationProgress({ current: i + 1, total: attendees.length });
-
-                // Create QR code canvas
-                const qrCanvas = document.createElement('canvas');
-                const qrSize = 300;
-                qrCanvas.width = qrSize;
-                qrCanvas.height = qrSize;
 
                 // Use the QRCodeCanvas to render
                 const qrContainer = document.createElement('div');
@@ -307,37 +294,9 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                     continue;
                 }
 
-                // Create final canvas
                 const canvas = document.createElement('canvas');
-                canvas.width = templateImg.width;
-                canvas.height = templateImg.height;
-                const ctx = canvas.getContext('2d');
-
-                if (ctx) {
-                    ctx.drawImage(templateImg, 0, 0);
-
-                    const qrSizeFinal = Math.min(templateImg.width * 0.38, templateImg.height * 0.22);
-                    const qrX = (templateImg.width - qrSizeFinal) / 2;
-                    const qrY = templateImg.height * 0.48;
-
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.fillRect(qrX - 10, qrY - 10, qrSizeFinal + 20, qrSizeFinal + 50);
-                    ctx.drawImage(qrCanvasElement, qrX, qrY, qrSizeFinal, qrSizeFinal);
-
-                    ctx.fillStyle = '#000000';
-                    ctx.font = `bold ${Math.floor(qrSizeFinal * 0.12)}px Arial`;
-                    ctx.textAlign = 'center';
-                    ctx.fillText(attendee.name.toUpperCase(), templateImg.width / 2, qrY + qrSizeFinal + 30);
-
-                    // Download
-                    const dataUrl = canvas.toDataURL('image/png');
-                    const downloadLink = document.createElement('a');
-                    downloadLink.href = dataUrl;
-                    downloadLink.download = `${attendee.name.replace(/\s+/g, '_')}_Entry_Pass.png`;
-                    document.body.appendChild(downloadLink);
-                    downloadLink.click();
-                    document.body.removeChild(downloadLink);
-                }
+                compositeOverlays(canvas, templateImg, buildEntryPassOverlays(templateImg, qrCanvasElement, attendee.name));
+                downloadCanvasAsPng(canvas, `${attendee.name.replace(/\s+/g, '_')}_Entry_Pass.png`);
 
                 root.unmount();
                 document.body.removeChild(qrContainer);

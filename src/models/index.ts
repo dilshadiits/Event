@@ -135,3 +135,137 @@ const AwardRecipientSchema = new mongoose.Schema({
 });
 
 export const AwardRecipient = mongoose.models.AwardRecipient || mongoose.model('AwardRecipient', AwardRecipientSchema);
+
+// ---- Competitions module (fests, teams, programs, judging, standings) ----
+
+// User - multi-role auth (super-admin, event-admin, judge, student)
+const UserSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    email: { type: String, index: true, sparse: true },
+    phone: { type: String, index: true, sparse: true },
+    passwordHash: { type: String }, // for super-admin / event-admin / judge credentials login
+    role: { type: String, enum: ['super-admin', 'event-admin', 'judge', 'student'], required: true },
+    festIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Fest' }], // scopes event-admin / judge access
+    participantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Participant' }, // set for role: 'student'
+    isActive: { type: Boolean, default: true },
+    createdAt: { type: Date, default: Date.now },
+});
+export const User = mongoose.models.User || mongoose.model('User', UserSchema);
+
+// Fest - top-level competition/festival container, sibling to Event/AwardEvent
+const FestSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    description: { type: String },
+    startDate: { type: String },
+    endDate: { type: String },
+    eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event' }, // optional link for shared registration/QR
+    pointsScheme: { type: Map, of: Number, default: { '1': 10, '2': 7, '3': 5 } },
+    teamPointsMultiplier: { type: Number, default: 1 },
+    resultsArePublic: { type: Boolean, default: false },
+    certificateTemplate: { type: String },
+    posterTemplate: { type: String },
+    isActive: { type: Boolean, default: true },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    createdAt: { type: Date, default: Date.now },
+});
+export const Fest = mongoose.models.Fest || mongoose.model('Fest', FestSchema);
+
+// Team - competes within a Fest
+const TeamSchema = new mongoose.Schema({
+    festId: { type: mongoose.Schema.Types.ObjectId, ref: 'Fest', required: true, index: true },
+    name: { type: String, required: true },
+    code: { type: String },
+    color: { type: String },
+    logoUrl: { type: String },
+    createdAt: { type: Date, default: Date.now },
+});
+TeamSchema.index({ festId: 1, name: 1 }, { unique: true });
+export const Team = mongoose.models.Team || mongoose.model('Team', TeamSchema);
+
+// Participant - a fest-scoped person, optionally backed by an Attendee (QR/check-in reuse)
+// and optionally by a User (student portal login)
+const ParticipantSchema = new mongoose.Schema({
+    festId: { type: mongoose.Schema.Types.ObjectId, ref: 'Fest', required: true, index: true },
+    teamId: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', index: true },
+    attendeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Attendee' },
+    name: { type: String, required: true },
+    email: { type: String },
+    phone: { type: String, index: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    createdAt: { type: Date, default: Date.now },
+});
+export const Participant = mongoose.models.Participant || mongoose.model('Participant', ParticipantSchema);
+
+// Program - a competition item (solo/team, stage/off-stage) within a Fest
+const ProgramSchema = new mongoose.Schema({
+    festId: { type: mongoose.Schema.Types.ObjectId, ref: 'Fest', required: true, index: true },
+    name: { type: String, required: true },
+    code: { type: String },
+    type: { type: String, enum: ['solo', 'team'], required: true },
+    mode: { type: String, enum: ['stage', 'off-stage'], required: true },
+    category: { type: String },
+    scheduledAt: { type: Date },
+    venue: { type: String },
+    status: {
+        type: String,
+        enum: ['scheduled', 'chest-numbers-shuffled', 'in-progress', 'judging-closed', 'results-published'],
+        default: 'scheduled',
+    },
+    criteria: [{
+        id: { type: String, required: true },
+        label: { type: String, required: true },
+        maxScore: { type: Number, default: 10 },
+        weight: { type: Number, default: 1 },
+    }],
+    judgePanel: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    resultsPublished: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now },
+});
+export const Program = mongoose.models.Program || mongoose.model('Program', ProgramSchema);
+
+// ProgramEntry - links a Participant (solo) or Team (team program) to a Program with a
+// freshly shuffled-per-program chest number, hiding identity from judges.
+const ProgramEntrySchema = new mongoose.Schema({
+    programId: { type: mongoose.Schema.Types.ObjectId, ref: 'Program', required: true, index: true },
+    participantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Participant' },
+    teamId: { type: mongoose.Schema.Types.ObjectId, ref: 'Team' },
+    chestNumber: { type: String }, // assigned by the shuffle step, not at entry-creation time
+    checkedIn: { type: Boolean, default: false },
+    checkedInAt: { type: Date },
+    disqualified: { type: Boolean, default: false },
+    rank: { type: Number },
+    totalScore: { type: Number },
+    createdAt: { type: Date, default: Date.now },
+});
+// NOTE: `sparse: true` alone does NOT skip these documents — for a compound index,
+// Mongo only omits a doc from a sparse index if ALL indexed fields are missing, and
+// programId is always present. Since chestNumber/participantId/teamId are each
+// optional on their own (assigned later, or mutually exclusive by entry type), a
+// plain sparse index would still index every doc with the missing field as `null`
+// and falsely collide. partialFilterExpression is what actually excludes them.
+ProgramEntrySchema.index(
+    { programId: 1, chestNumber: 1 },
+    { unique: true, partialFilterExpression: { chestNumber: { $exists: true } } }
+);
+ProgramEntrySchema.index(
+    { programId: 1, participantId: 1 },
+    { unique: true, partialFilterExpression: { participantId: { $exists: true } } }
+);
+ProgramEntrySchema.index(
+    { programId: 1, teamId: 1 },
+    { unique: true, partialFilterExpression: { teamId: { $exists: true } } }
+);
+export const ProgramEntry = mongoose.models.ProgramEntry || mongoose.model('ProgramEntry', ProgramEntrySchema);
+
+// Score - one doc per (judge, entry); criteriaScores map keeps this a single upsertable
+// document per judge submission, mirroring the Attendee.customResponses Map pattern.
+const ScoreSchema = new mongoose.Schema({
+    programId: { type: mongoose.Schema.Types.ObjectId, ref: 'Program', required: true, index: true },
+    entryId: { type: mongoose.Schema.Types.ObjectId, ref: 'ProgramEntry', required: true, index: true },
+    judgeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    criteriaScores: { type: Map, of: Number, required: true },
+    total: { type: Number, required: true },
+    submittedAt: { type: Date, default: Date.now },
+});
+ScoreSchema.index({ programId: 1, entryId: 1, judgeId: 1 }, { unique: true });
+export const Score = mongoose.models.Score || mongoose.model('Score', ScoreSchema);
