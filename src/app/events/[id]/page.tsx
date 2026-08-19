@@ -8,6 +8,7 @@ import EditAttendeeModal from '@/components/EditAttendeeModal';
 import FormBuilder, { FormField } from '@/components/FormBuilder';
 import BulkImportModal from '@/components/BulkImportModal';
 import { QRCodeCanvas } from 'qrcode.react';
+import QRCode from 'qrcode';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -452,7 +453,7 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
         }
     };
 
-    const handleSendWhatsApp = (attendee: Attendee) => {
+    const handleSendWhatsApp = async (attendee: Attendee) => {
         if (!attendee.phone) {
             alert('No phone number provided for this attendee.');
             return;
@@ -463,15 +464,122 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
             phone = '91' + phone;
         }
 
-        const passUrl = `${window.location.origin}/pass/${attendee.id}`;
-        let message = `Hello ${attendee.name},\n\nYour entry pass for ${eventName} is ready!\n\nYou can view and download your pass`;
-        if (attendee.guest_names) {
-            message += ` (and your accompanying guest's pass)`;
+        try {
+            // Provide feedback
+            alert('Generating PDF... Please wait a moment.');
+
+            const qrDataUrl = await QRCode.toDataURL(attendee.id, {
+                width: 300,
+                margin: 0,
+                errorCorrectionLevel: 'H'
+            });
+
+            // Load template
+            const DEFAULT_TEMPLATE = '/entry-pass-template.jpg';
+            const resolvedTemplate = entryPassImage && entryPassImage.trim() !== '' ? entryPassImage : DEFAULT_TEMPLATE;
+            
+            const templateImg = new window.Image();
+            const isExternal = resolvedTemplate.startsWith('http://') || resolvedTemplate.startsWith('https://');
+            templateImg.src = isExternal ? `/api/proxy-image?url=${encodeURIComponent(resolvedTemplate)}` : resolvedTemplate;
+            templateImg.crossOrigin = 'anonymous';
+
+            await new Promise((resolve, reject) => {
+                templateImg.onload = resolve;
+                templateImg.onerror = reject;
+            });
+
+            const canvas = document.createElement('canvas');
+            canvas.width = templateImg.width;
+            canvas.height = templateImg.height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('Could not get canvas context');
+
+            ctx.drawImage(templateImg, 0, 0);
+
+            // Calculate QR position
+            const boxX = Math.floor(templateImg.width * 0.27);
+            const boxY = Math.floor(templateImg.height * 0.575);
+            const boxW = Math.floor(templateImg.width * 0.458);
+            const boxH = Math.floor(templateImg.height * 0.266);
+            const qrSize = Math.min(boxW, boxH);
+            const qrX = boxX + Math.floor((boxW - qrSize) / 2);
+            const qrY = boxY + Math.floor((boxH - qrSize) / 2);
+
+            const qrImg = new window.Image();
+            qrImg.src = qrDataUrl;
+            await new Promise((resolve, reject) => {
+                qrImg.onload = resolve;
+                qrImg.onerror = reject;
+            });
+
+            ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+            const finalImageUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+            // Generate PDF
+            const pdf = new jsPDF({
+                orientation: templateImg.width > templateImg.height ? 'landscape' : 'portrait',
+                unit: 'px',
+                format: [templateImg.width, templateImg.height]
+            });
+            
+            pdf.addImage(finalImageUrl, 'JPEG', 0, 0, templateImg.width, templateImg.height);
+            
+            // If they have a guest, add a second page.
+            if (attendee.guest_names) {
+                const guestQrDataUrl = await QRCode.toDataURL(`${attendee.id}_guest_${attendee.guest_names}`, {
+                    width: 300,
+                    margin: 0,
+                    errorCorrectionLevel: 'H'
+                });
+                
+                const guestQrImg = new window.Image();
+                guestQrImg.src = guestQrDataUrl;
+                await new Promise((resolve, reject) => {
+                    guestQrImg.onload = resolve;
+                    guestQrImg.onerror = reject;
+                });
+                
+                // Clear the QR area by redrawing the template
+                ctx.drawImage(templateImg, 0, 0);
+                ctx.drawImage(guestQrImg, qrX, qrY, qrSize, qrSize);
+                
+                const guestFinalImageUrl = canvas.toDataURL('image/jpeg', 0.9);
+                pdf.addPage([templateImg.width, templateImg.height], templateImg.width > templateImg.height ? 'landscape' : 'portrait');
+                pdf.addImage(guestFinalImageUrl, 'JPEG', 0, 0, templateImg.width, templateImg.height);
+            }
+
+            const pdfBlob = pdf.output('blob');
+            const fileName = `${attendee.name.replace(/\s+/g, '_')}_Entry_Pass.pdf`;
+
+            let message = `Hello ${attendee.name},\n\nYour entry pass for ${eventName} is attached!\n\nPlease show this pass at the entrance.`;
+
+            // Try to use navigator.share (works on mobile)
+            if (navigator.canShare && navigator.canShare({ files: [new File([pdfBlob], fileName, { type: 'application/pdf' })] })) {
+                const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Entry Pass',
+                        text: message
+                    });
+                    return; // Successfully shared
+                } catch (shareError) {
+                    console.error('Error sharing:', shareError);
+                    // Fall back to download if share is aborted or fails
+                }
+            }
+
+            // Fallback: Download and open WhatsApp Web (for desktop)
+            pdf.save(fileName);
+            alert(`The PDF has been downloaded.\n\nSince direct file sharing is not supported on your browser (e.g., Desktop), we will now open WhatsApp. Please attach the downloaded PDF manually.`);
+            
+            const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+            window.open(waUrl, '_blank');
+
+        } catch (error) {
+            console.error('Error generating pass:', error);
+            alert('Failed to generate PDF pass. Please try again.');
         }
-        message += ` here: ${passUrl}\n\nPlease show this pass at the entrance.`;
-        
-        const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-        window.open(waUrl, '_blank');
     };
 
     if (loading) {
