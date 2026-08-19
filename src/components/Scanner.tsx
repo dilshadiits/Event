@@ -1,7 +1,10 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import jsQR from 'jsqr';
 import { Camera, CameraOff } from 'lucide-react';
+// jsQR exports as CJS — the actual function may be on .default in some bundlers
+import jsQRModule from 'jsqr';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const jsQR: typeof jsQRModule = (jsQRModule as any).default ?? jsQRModule;
 
 interface ScannerProps {
     onScan: (data: string) => void;
@@ -19,6 +22,8 @@ export default function Scanner({ onScan, paused }: ScannerProps) {
     const lastDecodeTimeRef = useRef<number>(0);
 
     const [status, setStatus] = useState<'requesting' | 'active' | 'denied' | 'error'>('requesting');
+    const [scanning, setScanning] = useState(false); // true when QR detected this frame
+    const frameCountRef = useRef(0);
 
     // Keep refs current without restarting camera
     useEffect(() => { pausedRef.current = paused; }, [paused]);
@@ -76,17 +81,22 @@ export default function Scanner({ onScan, paused }: ScannerProps) {
                 inversionAttempts: 'dontInvert',
             });
 
+            frameCountRef.current++;
+
             if (code && code.data) {
+                setScanning(true);
                 const now = Date.now();
                 const isDuplicate =
                     code.data === lastDecodeRef.current &&
-                    now - lastDecodeTimeRef.current < 3000; // debounce: same QR within 3s
+                    now - lastDecodeTimeRef.current < 3000;
 
                 if (!isDuplicate && !pausedRef.current) {
                     lastDecodeRef.current = code.data;
                     lastDecodeTimeRef.current = now;
                     onScanRef.current(code.data);
                 }
+            } else {
+                if (frameCountRef.current % 10 === 0) setScanning(false);
             }
 
             rafRef.current = requestAnimationFrame(tick);
@@ -120,22 +130,41 @@ export default function Scanner({ onScan, paused }: ScannerProps) {
             <div className="absolute inset-0 pointer-events-none">
                 {/* Dark border vignette */}
                 <div className="absolute inset-0 border-[60px] border-black/50 rounded-3xl" />
-                {/* Blue scan box */}
-                <div className="absolute inset-[60px] border-2 border-blue-400">
+                {/* Scan box — green when QR detected, blue otherwise */}
+                <div className={`absolute inset-[60px] border-2 transition-colors duration-100 ${scanning ? 'border-green-400' : 'border-blue-400'}`}>
                     {/* Corners */}
-                    <span className="absolute -top-1 -left-1 w-5 h-5 border-t-4 border-l-4 border-blue-400" />
-                    <span className="absolute -top-1 -right-1 w-5 h-5 border-t-4 border-r-4 border-blue-400" />
-                    <span className="absolute -bottom-1 -left-1 w-5 h-5 border-b-4 border-l-4 border-blue-400" />
-                    <span className="absolute -bottom-1 -right-1 w-5 h-5 border-b-4 border-r-4 border-blue-400" />
+                    <span className={`absolute -top-1 -left-1 w-5 h-5 border-t-4 border-l-4 ${scanning ? 'border-green-400' : 'border-blue-400'}`} />
+                    <span className={`absolute -top-1 -right-1 w-5 h-5 border-t-4 border-r-4 ${scanning ? 'border-green-400' : 'border-blue-400'}`} />
+                    <span className={`absolute -bottom-1 -left-1 w-5 h-5 border-b-4 border-l-4 ${scanning ? 'border-green-400' : 'border-blue-400'}`} />
+                    <span className={`absolute -bottom-1 -right-1 w-5 h-5 border-b-4 border-r-4 ${scanning ? 'border-green-400' : 'border-blue-400'}`} />
                     {/* Scan line */}
-                    {status === 'active' && (
+                    {status === 'active' && !scanning && (
                         <div
                             className="absolute left-0 right-0 h-0.5 bg-blue-400 shadow-[0_0_8px_3px_rgba(96,165,250,0.8)]"
                             style={{ animation: 'scanline 1.8s ease-in-out infinite' }}
                         />
                     )}
+                    {/* QR detected flash */}
+                    {scanning && (
+                        <div className="absolute inset-0 bg-green-400/20 flex items-center justify-center">
+                            <span className="text-green-300 font-bold text-sm tracking-widest animate-pulse">QR FOUND</span>
+                        </div>
+                    )}
                 </div>
+
+                {/* Bottom status pill */}
+                {status === 'active' && (
+                    <div className="absolute bottom-3 left-0 right-0 flex justify-center">
+                        <div className="flex items-center gap-2 bg-black/60 px-3 py-1 rounded-full">
+                            <span className={`w-2 h-2 rounded-full ${scanning ? 'bg-green-400' : 'bg-blue-400 animate-pulse'}`} />
+                            <span className="text-white text-xs font-medium">
+                                {scanning ? 'QR Detected — Processing...' : 'Scanning...'}
+                            </span>
+                        </div>
+                    </div>
+                )}
             </div>
+
 
             {/* Status overlays */}
             {status === 'requesting' && (
