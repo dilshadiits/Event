@@ -42,7 +42,10 @@ export async function POST(req: Request) {
 
         await dbConnect();
 
-        const attendee = await Attendee.findById(attendeeId);
+        // Lean query — returns plain JS object, ~3-5x faster than full hydration
+        const attendee = await Attendee.findById(attendeeId)
+            .select('name email eventId status checked_in_at guest_names guest_checked_in guest_checked_in_at seatingNumber')
+            .lean();
 
         if (!attendee) {
             return successResponse({
@@ -84,10 +87,11 @@ export async function POST(req: Request) {
                 });
             }
 
-            // Mark guest as checked in
-            attendee.guest_checked_in = true;
-            attendee.guest_checked_in_at = new Date();
-            await attendee.save();
+            // Mark guest as checked in (atomic update, no re-fetch needed)
+            await Attendee.findByIdAndUpdate(attendeeId, {
+                guest_checked_in: true,
+                guest_checked_in_at: new Date(),
+            });
 
             return successResponse({
                 success: true,
@@ -105,19 +109,21 @@ export async function POST(req: Request) {
             return successResponse({
                 success: false,
                 message: `Already checked in at ${new Date(attendee.checked_in_at).toLocaleTimeString()}`,
-                attendee: { ...attendee.toObject(), id: attendee._id.toString() }
+                attendee: { ...attendee, id: attendee._id.toString() }
             });
         }
 
-        // Mark main attendee as checked in
-        attendee.status = 'checked-in';
-        attendee.checked_in_at = new Date();
-        await attendee.save();
+        // Mark main attendee as checked in (atomic update)
+        const now = new Date();
+        await Attendee.findByIdAndUpdate(attendeeId, {
+            status: 'checked-in',
+            checked_in_at: now,
+        });
 
         return successResponse({
             success: true,
             message: 'Check-in Successful!',
-            attendee: { ...attendee.toObject(), id: attendee._id.toString() }
+            attendee: { ...attendee, id: attendee._id.toString() }
         });
 
     } catch (error) {
