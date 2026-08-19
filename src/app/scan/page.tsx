@@ -22,7 +22,7 @@ function ScanContent() {
     const [isProcessing, setIsProcessing] = useState(false);
 
     const handleScan = useCallback(async (data: string) => {
-        if (isProcessing || scanResult) return;
+        if (isProcessing) return; // only block during active network request
         setIsProcessing(true);
 
         try {
@@ -33,7 +33,7 @@ function ScanContent() {
             const res = await fetch('/api/scan', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ scanData: data, eventId }), // Pass eventId
+                body: JSON.stringify({ scanData: data, eventId }),
             });
             const result = await res.json();
             setScanResult(result);
@@ -42,7 +42,8 @@ function ScanContent() {
         } finally {
             setIsProcessing(false);
         }
-    }, [isProcessing, scanResult, eventId]);
+    }, [isProcessing, eventId]);
+
 
     const resetScanner = () => {
         setScanResult(null);
