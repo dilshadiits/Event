@@ -12,7 +12,10 @@ interface QRCodeModalProps {
     templateUrl?: string;
 }
 
-export default function QRCodeModal({ value, name, eventName, isOpen, onClose, templateUrl = '/entry-pass-template.jpg' }: QRCodeModalProps) {
+export default function QRCodeModal({ value, name, eventName, isOpen, onClose, templateUrl }: QRCodeModalProps) {
+    const DEFAULT_TEMPLATE = '/entry-pass-template.jpg';
+    // Normalize: treat empty string same as undefined → use default
+    const resolvedTemplate = templateUrl && templateUrl.trim() !== '' ? templateUrl : DEFAULT_TEMPLATE;
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const qrRef = useRef<HTMLDivElement>(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -23,7 +26,7 @@ export default function QRCodeModal({ value, name, eventName, isOpen, onClose, t
             generateEntryPass();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen, value, name]);
+    }, [isOpen, value, name, templateUrl]);
 
     const generateEntryPass = async () => {
         setIsGenerating(true);
@@ -49,7 +52,7 @@ export default function QRCodeModal({ value, name, eventName, isOpen, onClose, t
         // Load the template image
         const templateImg = new Image();
         templateImg.crossOrigin = 'anonymous';
-        templateImg.src = templateUrl || '/entry-pass-template.jpg';
+        templateImg.src = resolvedTemplate;
 
         templateImg.onload = () => {
             // Set canvas size to match template
@@ -77,23 +80,41 @@ export default function QRCodeModal({ value, name, eventName, isOpen, onClose, t
         templateImg.onerror = () => {
             console.warn('Failed to load template image, falling back to plain QR');
             // Fallback: Clear canvas and just draw QR code
-            canvas.width = 300;
-            canvas.height = 300;
+            canvas.width = 400;
+            canvas.height = 450;
+
+            // Dark background
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, 400, 450);
+
+            // Warning banner if using default (no custom template set)
+            if (!templateUrl || templateUrl.trim() === '') {
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillRect(0, 0, 400, 40);
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 13px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('⚠  Upload a template in Event Settings', 200, 26);
+            }
+
+            // White QR background
             ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(0, 0, 300, 300);
+            ctx.fillRect(50, 60, 300, 300);
 
-            // Draw QR centered
-            ctx.drawImage(qrCanvas, 25, 25, 250, 250); // 300 - 50 margin
+            // Draw QR
+            ctx.drawImage(qrCanvas, 60, 70, 280, 280);
 
-            ctx.fillStyle = '#000000';
-            ctx.font = 'bold 16px Arial';
+            // Name label
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 18px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText(name, 150, 290);
+            ctx.fillText(name.toUpperCase(), 200, 420);
 
             const dataUrl = canvas.toDataURL('image/png');
             setEntryPassDataUrl(dataUrl);
             setIsGenerating(false);
         };
+
     };
 
     if (!isOpen) return null;
