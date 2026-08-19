@@ -50,9 +50,14 @@ export default function QRCodeModal({ value, name, eventName, isOpen, onClose, t
         }
 
         // Load the template image
+        // External URLs must go through the proxy to avoid canvas CORS tainting
         const templateImg = new Image();
-        templateImg.crossOrigin = 'anonymous';
-        templateImg.src = resolvedTemplate;
+        const isExternal = resolvedTemplate.startsWith('http://') || resolvedTemplate.startsWith('https://');
+        const imageSrc = isExternal
+            ? `/api/proxy-image?url=${encodeURIComponent(resolvedTemplate)}`
+            : resolvedTemplate;
+        templateImg.src = imageSrc;
+        // crossOrigin not needed for same-origin proxy requests
 
         templateImg.onload = () => {
             // Set canvas size to match template

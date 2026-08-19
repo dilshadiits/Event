@@ -261,10 +261,13 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
         setGenerationProgress({ current: 0, total: attendees.length });
 
         try {
-            // Load template image
+            // Load template image — proxy external URLs to avoid canvas CORS tainting
             const templateImg = new Image();
-            templateImg.crossOrigin = 'anonymous';
-            templateImg.src = entryPassImage || '/entry-pass-template.jpg';
+            const templateSrc = entryPassImage || '/entry-pass-template.jpg';
+            const isExternalTemplate = templateSrc.startsWith('http://') || templateSrc.startsWith('https://');
+            templateImg.src = isExternalTemplate
+                ? `/api/proxy-image?url=${encodeURIComponent(templateSrc)}`
+                : templateSrc;
 
             await new Promise((resolve, reject) => {
                 templateImg.onload = resolve;
