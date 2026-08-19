@@ -164,27 +164,48 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
         const file = e.target.files?.[0];
         if (!file) return;
 
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file (JPG, PNG, WebP).');
+            return;
+        }
+
         setUploadingImage(true);
-        const formData = new FormData();
-        formData.append('file', file);
 
         try {
-            const res = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData,
+            // Read entirely client-side as data URL (works on Vercel / any host)
+            const dataUrl = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
             });
-            const data = await res.json();
 
-            if (res.ok && data.url) {
-                setEntryPassImage(data.url);
-            } else {
-                alert('Image upload failed');
-            }
+            // Compress if wider than 1200px
+            const MAX_WIDTH = 1200;
+            const img = new Image();
+            img.src = dataUrl;
+
+            const compressed = await new Promise<string>((resolve) => {
+                img.onload = () => {
+                    if (img.width <= MAX_WIDTH) { resolve(dataUrl); return; }
+                    const scale = MAX_WIDTH / img.width;
+                    const canvas = document.createElement('canvas');
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = Math.round(img.height * scale);
+                    const ctx = canvas.getContext('2d')!;
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.88));
+                };
+                img.onerror = () => resolve(dataUrl);
+            });
+
+            setEntryPassImage(compressed);
         } catch (err) {
-            console.error('Upload error:', err);
-            alert('Error uploading image');
+            console.error('Image read error:', err);
+            alert('Failed to read image. Please try again.');
         } finally {
             setUploadingImage(false);
+            e.target.value = '';
         }
     };
 
