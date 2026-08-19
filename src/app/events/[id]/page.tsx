@@ -6,6 +6,7 @@ import { ArrowLeft, Search, QrCode, CheckCircle, Instagram, Phone, Users, Link a
 import QRCodeModal from '@/components/QRCodeModal';
 import EditAttendeeModal from '@/components/EditAttendeeModal';
 import FormBuilder, { FormField } from '@/components/FormBuilder';
+import BulkImportModal from '@/components/BulkImportModal';
 import { QRCodeCanvas } from 'qrcode.react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -48,6 +49,7 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
     const [isSavingSettings, setIsSavingSettings] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [uploadingImage, setUploadingImage] = useState(false);
+    const [showBulkImport, setShowBulkImport] = useState(false);
 
     // Modal State
     const [selectedAttendee, setSelectedAttendee] = useState<Attendee | null>(null);
@@ -316,18 +318,12 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                 if (ctx) {
                     ctx.drawImage(templateImg, 0, 0);
 
-                    const qrSizeFinal = Math.min(templateImg.width * 0.38, templateImg.height * 0.22);
-                    const qrX = (templateImg.width - qrSizeFinal) / 2;
-                    const qrY = templateImg.height * 0.48;
+                    // Match positioning in QRCodeModal: centered, 57.5% from top, 43.5% width
+                    const qrSizeFinal = Math.floor(templateImg.width * 0.435);
+                    const qrX = Math.floor((templateImg.width - qrSizeFinal) / 2);
+                    const qrY = Math.floor(templateImg.height * 0.575);
 
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.fillRect(qrX - 10, qrY - 10, qrSizeFinal + 20, qrSizeFinal + 50);
                     ctx.drawImage(qrCanvasElement, qrX, qrY, qrSizeFinal, qrSizeFinal);
-
-                    ctx.fillStyle = '#000000';
-                    ctx.font = `bold ${Math.floor(qrSizeFinal * 0.12)}px Arial`;
-                    ctx.textAlign = 'center';
-                    ctx.fillText(attendee.name.toUpperCase(), templateImg.width / 2, qrY + qrSizeFinal + 30);
 
                     // Download
                     const dataUrl = canvas.toDataURL('image/png');
@@ -466,6 +462,13 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                     >
                         {inviteCopied ? <Check className="w-3 h-3" /> : <LinkIcon className="w-3 h-3" />}
                         {inviteCopied ? 'Copied!' : 'Invite Link'}
+                    </button>
+                    <button
+                        onClick={() => setShowBulkImport(true)}
+                        className="flex items-center gap-2 bg-teal-600/20 hover:bg-teal-600/40 text-teal-400 text-xs px-3 py-2 rounded-full transition-all border border-teal-500/30"
+                    >
+                        <Users className="w-3 h-3" />
+                        Bulk Import
                     </button>
                     <Link
                         href={`/spot/${id}`}
@@ -843,6 +846,15 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                 onSave={handleAttendeeUpdate}
                 fields={formConfig}
             />
+
+            {/* Bulk Import Modal */}
+            {showBulkImport && (
+                <BulkImportModal
+                    eventId={id}
+                    onClose={() => setShowBulkImport(false)}
+                    onSuccess={() => fetchAttendees(true)}
+                />
+            )}
 
             {/* Hidden container for QR generation */}
             <div ref={qrContainerRef} className="hidden" />

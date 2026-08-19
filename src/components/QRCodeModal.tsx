@@ -59,25 +59,14 @@ export default function QRCodeModal({ value, name, eventName, isOpen, onClose, t
             // Draw the template
             ctx.drawImage(templateImg, 0, 0);
 
-            // Calculate QR code position (center of the white box area)
-            // The white box is approximately in the center of the template
-            // Based on the template, the white box starts around 22% from left and 47% from top
-            const qrSize = Math.min(templateImg.width * 0.38, templateImg.height * 0.22);
-            const qrX = (templateImg.width - qrSize) / 2;
-            const qrY = templateImg.height * 0.48;
+            // QR code placement — fits inside the white placeholder box in the template.
+            // The white box is centered horizontally and sits at ~57% to ~83% of the height.
+            const qrSize = Math.floor(templateImg.width * 0.435);
+            const qrX = Math.floor((templateImg.width - qrSize) / 2);
+            const qrY = Math.floor(templateImg.height * 0.575);
 
-            // Draw white background for QR code
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 50);
-
-            // Draw the QR code
+            // Draw QR code directly into the white box
             ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
-
-            // Add the name below the QR code
-            ctx.fillStyle = '#000000';
-            ctx.font = `bold ${Math.floor(qrSize * 0.12)}px Arial`;
-            ctx.textAlign = 'center';
-            ctx.fillText(name.toUpperCase(), templateImg.width / 2, qrY + qrSize + 30);
 
             // Generate the data URL
             const dataUrl = canvas.toDataURL('image/png');
