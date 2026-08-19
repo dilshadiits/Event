@@ -465,8 +465,7 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
         }
 
         try {
-            // Provide feedback
-            alert('Generating PDF... Please wait a moment.');
+            alert('Generating Image... Please wait a moment.');
 
             const qrDataUrl = await QRCode.toDataURL(attendee.id, {
                 width: 300,
@@ -474,7 +473,6 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                 errorCorrectionLevel: 'H'
             });
 
-            // Load template
             const DEFAULT_TEMPLATE = '/entry-pass-template.jpg';
             const resolvedTemplate = entryPassImage && entryPassImage.trim() !== '' ? entryPassImage : DEFAULT_TEMPLATE;
             
@@ -488,6 +486,7 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                 templateImg.onerror = reject;
             });
 
+            // Create Main Pass Canvas
             const canvas = document.createElement('canvas');
             canvas.width = templateImg.width;
             canvas.height = templateImg.height;
@@ -496,7 +495,6 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
 
             ctx.drawImage(templateImg, 0, 0);
 
-            // Calculate QR position
             const boxX = Math.floor(templateImg.width * 0.27);
             const boxY = Math.floor(templateImg.height * 0.575);
             const boxW = Math.floor(templateImg.width * 0.458);
@@ -513,19 +511,20 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
             });
 
             ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
-            const finalImageUrl = canvas.toDataURL('image/jpeg', 0.9);
 
-            // Generate PDF
-            const pdf = new jsPDF({
-                orientation: templateImg.width > templateImg.height ? 'landscape' : 'portrait',
-                unit: 'px',
-                format: [templateImg.width, templateImg.height]
-            });
+            // Setup final combined canvas
+            const hasGuest = Boolean(attendee.guest_names);
+            const finalCanvas = document.createElement('canvas');
+            finalCanvas.width = templateImg.width;
+            finalCanvas.height = hasGuest ? templateImg.height * 2 : templateImg.height;
+            const finalCtx = finalCanvas.getContext('2d');
+            if (!finalCtx) throw new Error('Could not get final canvas context');
+
+            // Draw first pass
+            finalCtx.drawImage(canvas, 0, 0);
             
-            pdf.addImage(finalImageUrl, 'JPEG', 0, 0, templateImg.width, templateImg.height);
-            
-            // If they have a guest, add a second page.
-            if (attendee.guest_names) {
+            // If they have a guest, draw second pass underneath
+            if (hasGuest) {
                 const guestQrDataUrl = await QRCode.toDataURL(`${attendee.id}_guest_${attendee.guest_names}`, {
                     width: 300,
                     margin: 0,
@@ -539,46 +538,68 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                     guestQrImg.onerror = reject;
                 });
                 
-                // Clear the QR area by redrawing the template
+                // Clear the temporary canvas and draw guest pass
                 ctx.drawImage(templateImg, 0, 0);
                 ctx.drawImage(guestQrImg, qrX, qrY, qrSize, qrSize);
                 
-                const guestFinalImageUrl = canvas.toDataURL('image/jpeg', 0.9);
-                pdf.addPage([templateImg.width, templateImg.height], templateImg.width > templateImg.height ? 'landscape' : 'portrait');
-                pdf.addImage(guestFinalImageUrl, 'JPEG', 0, 0, templateImg.width, templateImg.height);
+                // Draw onto final canvas at the bottom
+                finalCtx.drawImage(canvas, 0, templateImg.height);
             }
 
-            const pdfBlob = pdf.output('blob');
-            const fileName = `${attendee.name.replace(/\s+/g, '_')}_Entry_Pass.pdf`;
+            // Convert combined canvas to Blob
+            const blob: Blob = await new Promise((resolve, reject) => {
+                finalCanvas.toBlob((b) => {
+                    if (b) resolve(b);
+                    else reject(new Error('Canvas to Blob failed'));
+                }, 'image/png');
+            });
 
-            let message = `Hello ${attendee.name},\n\nYour entry pass for ${eventName} is attached!\n\nPlease show this pass at the entrance.`;
+            const fileName = `${attendee.name.replace(/\s+/g, '_')}_Entry_Pass.png`;
+            const passUrl = `${window.location.origin}/pass/${attendee.id}`;
+            let message = `Hello ${attendee.name},\n\nYour entry pass for ${eventName} is ready!\n\nYou can also view it anytime here: ${passUrl}\n\nPlease show this pass at the entrance.`;
 
-            // Try to use navigator.share (works on mobile)
-            if (navigator.canShare && navigator.canShare({ files: [new File([pdfBlob], fileName, { type: 'application/pdf' })] })) {
-                const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+            const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+
+            // Try to use navigator.share (works flawlessly on mobile apps)
+            if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'image/png' })] })) {
+                const file = new File([blob], fileName, { type: 'image/png' });
                 try {
                     await navigator.share({
                         files: [file],
                         title: 'Entry Pass',
                         text: message
                     });
-                    return; // Successfully shared
+                    return; // Successfully shared natively
                 } catch (shareError) {
-                    console.error('Error sharing:', shareError);
-                    // Fall back to download if share is aborted or fails
+                    console.error('Error sharing natively:', shareError);
+                    // Fall back to clipboard trick
                 }
             }
 
-            // Fallback: Download and open WhatsApp Web (for desktop)
-            pdf.save(fileName);
-            alert(`The PDF has been downloaded.\n\nSince direct file sharing is not supported on your browser (e.g., Desktop), we will now open WhatsApp. Please attach the downloaded PDF manually.`);
-            
-            const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+            // Fallback for Desktop Web: Copy image to clipboard so user can just paste it
+            try {
+                const clipboardItem = new ClipboardItem({ 'image/png': blob });
+                await navigator.clipboard.write([clipboardItem]);
+                alert('✅ Image copied to clipboard!\n\nWhen WhatsApp Web opens, just press PASTE (Ctrl+V or Cmd+V) to attach the pass instantly, then hit send.');
+            } catch (clipboardError) {
+                console.error('Clipboard write failed:', clipboardError);
+                // Last resort: download the image
+                const downloadUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(downloadUrl);
+                alert('Since clipboard copying failed, the image was downloaded. Please attach it manually in WhatsApp.');
+            }
+
             window.open(waUrl, '_blank');
 
         } catch (error) {
             console.error('Error generating pass:', error);
-            alert('Failed to generate PDF pass. Please try again.');
+            alert('Failed to generate image pass. Please try again.');
         }
     };
 
