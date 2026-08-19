@@ -342,10 +342,14 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
                 if (ctx) {
                     ctx.drawImage(templateImg, 0, 0);
 
-                    // Match positioning in QRCodeModal: centered, 57.5% from top, 43.5% width
-                    const qrSizeFinal = Math.floor(templateImg.width * 0.435);
-                    const qrX = Math.floor((templateImg.width - qrSizeFinal) / 2);
-                    const qrY = Math.floor(templateImg.height * 0.575);
+                    // Precise white-box coords matching QRCodeModal (754x1024 template)
+                    const boxX = Math.floor(templateImg.width * 0.27);
+                    const boxY = Math.floor(templateImg.height * 0.575);
+                    const boxW = Math.floor(templateImg.width * 0.458);
+                    const boxH = Math.floor(templateImg.height * 0.266);
+                    const qrSizeFinal = Math.min(boxW, boxH);
+                    const qrX = boxX + Math.floor((boxW - qrSizeFinal) / 2);
+                    const qrY = boxY + Math.floor((boxH - qrSizeFinal) / 2);
 
                     ctx.drawImage(qrCanvasElement, qrX, qrY, qrSizeFinal, qrSizeFinal);
 

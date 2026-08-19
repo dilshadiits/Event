@@ -67,11 +67,21 @@ export default function QRCodeModal({ value, name, eventName, isOpen, onClose, t
             // Draw the template
             ctx.drawImage(templateImg, 0, 0);
 
-            // QR code placement — fits inside the white placeholder box in the template.
-            // The white box is centered horizontally and sits at ~57% to ~83% of the height.
-            const qrSize = Math.floor(templateImg.width * 0.435);
-            const qrX = Math.floor((templateImg.width - qrSize) / 2);
-            const qrY = Math.floor(templateImg.height * 0.575);
+            // White box in the 754x1024 template:
+            //   Left:   27%  →  x ≈ 204px
+            //   Top:    57.5% → y ≈ 589px
+            //   Width:  45.8% → ~345px (box is ~45.8% wide)
+            //   Height: 26.6% → ~272px (box is ~26.6% tall)
+            // Use the box dimensions directly so QR fills it exactly.
+            const boxX = Math.floor(templateImg.width * 0.27);
+            const boxY = Math.floor(templateImg.height * 0.575);
+            const boxW = Math.floor(templateImg.width * 0.458);
+            const boxH = Math.floor(templateImg.height * 0.266);
+            // Keep QR square — use the smaller dimension
+            const qrSize = Math.min(boxW, boxH);
+            // Center within the box
+            const qrX = boxX + Math.floor((boxW - qrSize) / 2);
+            const qrY = boxY + Math.floor((boxH - qrSize) / 2);
 
             // Draw QR code directly into the white box
             ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
