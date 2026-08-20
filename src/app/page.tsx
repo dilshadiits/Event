@@ -1,8 +1,15 @@
 import Link from 'next/link';
+import { Black_Ops_One } from 'next/font/google';
 import {
-    Trophy, ArrowRight, Users, EyeOff, Activity, Globe2, Award, GraduationCap,
+    ArrowRight, Users, EyeOff, Activity, Globe2, Award, GraduationCap,
     Building2, ListChecks, Gavel, PartyPopper, QrCode, Vote, ShieldCheck, Lock,
 } from 'lucide-react';
+
+// Wordmark-only logo — no icon. Black Ops One has no true italic in Google Fonts,
+// so the slant is a browser-synthesized (faux) italic — applied as an inline
+// style on the element below, since next/font's own generated class already sets
+// font-style: normal at the same specificity as a Tailwind `italic` class would.
+const logoFont = Black_Ops_One({ weight: '400', subsets: ['latin'], display: 'swap' });
 
 const judgingFeatures = [
     {
@@ -74,12 +81,14 @@ export default function MarketingLandingPage() {
 
             {/* Nav */}
             <header className="max-w-6xl mx-auto px-4 md:px-8 pt-6 md:pt-8 flex items-center justify-between relative z-10">
-                <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center">
-                        <Trophy className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="font-bold text-white text-lg">Event</span>
-                </div>
+                <span
+                    className={`${logoFont.className} text-white text-2xl tracking-wide`}
+                    style={{ fontStyle: 'italic' }} // next/font bakes font-style: normal into its own
+                    // class at equal specificity to Tailwind's `italic`, so the class alone loses the
+                    // cascade — an inline style is the reliable way to force the slant.
+                >
+                    Event
+                </span>
                 <nav className="flex items-center gap-2 sm:gap-3">
                     <Link href="/login" className="text-sm text-muted-foreground hover:text-white transition-colors px-2">
                         Sign in
