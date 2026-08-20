@@ -23,6 +23,7 @@ const PUBLIC_ROUTES = [
     '/signup', // self-service account creation
     '/onboarding', // "name your organization" onboarding step
     '/login', // unified Admin/Judge/Student sign-in gateway
+    '/get-started', // role-chooser reached from the marketing landing page
 ];
 
 // Check if current path is a public route
