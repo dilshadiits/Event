@@ -139,7 +139,7 @@ export default function VotePage({ params }: { params: Promise<{ eventId: string
         <main className="min-h-screen p-4 md:p-8 max-w-4xl mx-auto space-y-6">
             {/* Header */}
             <header className="flex items-center gap-4">
-                <Link href="/" className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
+                <Link href="/events" className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
                     <ArrowLeft className="w-6 h-6 text-muted-foreground" />
                 </Link>
                 <div>

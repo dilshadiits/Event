@@ -1,14 +1,11 @@
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 
-const LOGIN_PATHS = ['/admin/competitions/login', '/judge/login', '/student/login'];
-
-function loginPathFor(pathname: string): string | null {
-    if (pathname.startsWith('/product-admin')) return '/admin/competitions/login';
-    if (pathname.startsWith('/admin/competitions')) return '/admin/competitions/login';
-    if (pathname.startsWith('/judge')) return '/judge/login';
-    if (pathname.startsWith('/student')) return '/student/login';
-    return null;
+// Judges sign in through the same /login gateway as Admins (password tab) — only
+// Students use a distinct query param to preselect the phone/OTP tab.
+function loginPathFor(pathname: string): string {
+    if (pathname.startsWith('/student')) return '/login?mode=student';
+    return '/login';
 }
 
 function roleAllowed(pathname: string, role: string | undefined): boolean {
@@ -23,20 +20,15 @@ export default withAuth(
     function middleware(req) {
         const { pathname } = req.nextUrl;
 
-        // Login pages themselves are always reachable, whether or not a session exists.
-        if (LOGIN_PATHS.includes(pathname)) {
-            return NextResponse.next();
-        }
-
+        // /login itself isn't under any matched prefix below, so it's never
+        // intercepted by this middleware at all — always reachable by design.
         const role = req.nextauth.token?.role as string | undefined;
         if (!roleAllowed(pathname, role)) {
-            const loginPath = loginPathFor(pathname);
-            if (loginPath) {
-                const url = req.nextUrl.clone();
-                url.pathname = loginPath;
-                url.search = '';
-                return NextResponse.redirect(url);
-            }
+            const url = req.nextUrl.clone();
+            const [loginPathname, loginSearch] = loginPathFor(pathname).split('?');
+            url.pathname = loginPathname;
+            url.search = loginSearch ? `?${loginSearch}` : '';
+            return NextResponse.redirect(url);
         }
 
         // A Super Admin who hasn't finished onboarding (no organization yet) gets
@@ -57,8 +49,9 @@ export default withAuth(
     {
         callbacks: {
             // Always let requests through to our own middleware function above —
-            // it does the real role check per-prefix (login pages need to stay reachable
-            // for unauthenticated users, which a single static `authorized` gate can't express).
+            // it does the real role check per-prefix (the login gateway needs to stay
+            // reachable for unauthenticated users, which a single static `authorized`
+            // gate can't express).
             authorized: () => true,
         },
     }

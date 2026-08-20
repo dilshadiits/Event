@@ -392,7 +392,7 @@ export default function EventPage({ params }: { params: Promise<{ id: string }> 
             {/* Details Header */}
             <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-4">
-                    <Link href="/" className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
+                    <Link href="/events" className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
                         <ArrowLeft className="w-6 h-6 text-muted-foreground" />
                     </Link>
                     <div>

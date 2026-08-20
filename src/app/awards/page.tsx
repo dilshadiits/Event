@@ -87,7 +87,7 @@ export default function AwardsPage() {
                     </p>
                 </div>
                 <Link
-                    href="/"
+                    href="/events"
                     className="text-sm text-muted-foreground hover:text-white transition-colors"
                 >
                     ← Back to Events

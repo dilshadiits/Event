@@ -47,7 +47,7 @@ export default function CompetitionsListPage() {
                         </Link>
                     )}
                     <button
-                        onClick={() => signOut({ callbackUrl: '/admin/competitions/login' })}
+                        onClick={() => signOut({ callbackUrl: '/login' })}
                         className="flex items-center gap-2 text-muted-foreground hover:text-white p-2 rounded-lg hover:bg-muted transition-colors"
                         title="Sign out"
                     >

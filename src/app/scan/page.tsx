@@ -59,7 +59,7 @@ function ScanContent() {
 
             {/* Top Bar */}
             <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
-                <Link href="/" className="flex items-center gap-2 text-white/50 hover:text-white transition-colors">
+                <Link href="/events" className="flex items-center gap-2 text-white/50 hover:text-white transition-colors">
                     <Home className="w-6 h-6" />
                     <span className="text-sm font-medium">Dashboard</span>
                 </Link>

@@ -68,7 +68,7 @@ export default function StudentHomePage() {
                         <Trophy className="w-5 h-5" />
                     </Link>
                     <button
-                        onClick={() => signOut({ callbackUrl: '/student/login' })}
+                        onClick={() => signOut({ callbackUrl: '/login' })}
                         className="p-2 text-muted-foreground hover:text-white hover:bg-muted rounded-lg transition-colors"
                         title="Sign out"
                     >

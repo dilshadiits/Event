@@ -22,10 +22,13 @@ const PUBLIC_ROUTES = [
     '/product-admin',
     '/signup', // self-service account creation
     '/onboarding', // "name your organization" onboarding step
+    '/login', // unified Admin/Judge/Student sign-in gateway
 ];
 
 // Check if current path is a public route
 const isPublicRoute = (pathname: string): boolean => {
+    // The landing page — an exact match, not a prefix, since every path starts with "/"
+    if (pathname === '/') return true;
     // Check for voting page specifically - check various patterns
     if (pathname.includes('/vote')) return true;
     // Check for awards pages with IDs (public voting links)
