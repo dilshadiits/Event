@@ -1,6 +1,6 @@
 import dbConnect from '@/lib/mongodb';
 import { Program, ProgramEntry, User } from '@/models';
-import { errorResponse, successResponse, withErrorHandler, requireFestAccess } from '@/lib/api-utils';
+import { errorResponse, successResponse, withErrorHandler, requireOrgFestAccess } from '@/lib/api-utils';
 import { updateProgramSchema, sanitizeString, isValidObjectId } from '@/lib/validate';
 
 // GET /api/programs/[id]
@@ -12,7 +12,7 @@ export const GET = withErrorHandler(async (req: Request, context: { params: Prom
     const program = await Program.findById(id).lean();
     if (!program) return errorResponse('Program not found', 404);
 
-    const caller = await requireFestAccess(program.festId.toString());
+    const caller = await requireOrgFestAccess(program.festId.toString());
     if (!caller) return errorResponse('Unauthorized', 403);
 
     const judges = await User.find({ _id: { $in: program.judgePanel || [] } }).select('name email').lean();
@@ -43,7 +43,7 @@ export const PUT = withErrorHandler(async (req: Request, context: { params: Prom
     const program = await Program.findById(id);
     if (!program) return errorResponse('Program not found', 404);
 
-    const caller = await requireFestAccess(program.festId.toString());
+    const caller = await requireOrgFestAccess(program.festId.toString());
     if (!caller) return errorResponse('Unauthorized', 403);
 
     const body = await req.json();
@@ -70,7 +70,7 @@ export const DELETE = withErrorHandler(async (req: Request, context: { params: P
     const program = await Program.findById(id);
     if (!program) return errorResponse('Program not found', 404);
 
-    const caller = await requireFestAccess(program.festId.toString());
+    const caller = await requireOrgFestAccess(program.festId.toString());
     if (!caller) return errorResponse('Unauthorized', 403);
 
     const entryCount = await ProgramEntry.countDocuments({ programId: id });

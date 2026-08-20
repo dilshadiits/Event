@@ -1,6 +1,6 @@
 import dbConnect from '@/lib/mongodb';
-import { Participant, User } from '@/models';
-import { errorResponse, successResponse, withErrorHandler, requireFestAccess } from '@/lib/api-utils';
+import { Fest, Participant, User } from '@/models';
+import { errorResponse, successResponse, withErrorHandler, requireOrgFestAccess } from '@/lib/api-utils';
 import { isValidObjectId } from '@/lib/validate';
 
 function normalizePhone(phone: string): string {
@@ -19,7 +19,7 @@ export const POST = withErrorHandler(async (req: Request, context: { params: Pro
     const participant = await Participant.findById(id);
     if (!participant) return errorResponse('Participant not found', 404);
 
-    const caller = await requireFestAccess(participant.festId.toString());
+    const caller = await requireOrgFestAccess(participant.festId.toString());
     if (!caller) return errorResponse('Unauthorized', 403);
 
     if (participant.userId) {
@@ -29,10 +29,21 @@ export const POST = withErrorHandler(async (req: Request, context: { params: Pro
         return errorResponse('This participant has no phone number on file — add one before enabling login', 400);
     }
 
+    // Scope the lookup by organization too — the same phone number can legitimately
+    // be a student in more than one organization, just not twice within the same one.
+    const fest = await Fest.findById(participant.festId).select('organizationId').lean();
+    if (!fest) return errorResponse('Fest not found', 404);
+
     const phone = normalizePhone(participant.phone);
-    let user = await User.findOne({ phone, role: 'student' });
+    let user = await User.findOne({ phone, role: 'student', organizationId: fest.organizationId });
     if (!user) {
-        user = await User.create({ name: participant.name, phone, role: 'student', participantId: participant._id });
+        user = await User.create({
+            name: participant.name,
+            phone,
+            role: 'student',
+            organizationId: fest.organizationId,
+            participantId: participant._id,
+        });
     }
 
     participant.userId = user._id;

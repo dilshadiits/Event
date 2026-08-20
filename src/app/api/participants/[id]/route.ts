@@ -1,6 +1,6 @@
 import dbConnect from '@/lib/mongodb';
 import { Participant, Team, ProgramEntry } from '@/models';
-import { errorResponse, successResponse, withErrorHandler, requireFestAccess } from '@/lib/api-utils';
+import { errorResponse, successResponse, withErrorHandler, requireOrgFestAccess } from '@/lib/api-utils';
 import { updateParticipantSchema, sanitizeString, isValidObjectId } from '@/lib/validate';
 
 // PUT /api/participants/[id]
@@ -12,7 +12,7 @@ export const PUT = withErrorHandler(async (req: Request, context: { params: Prom
     const participant = await Participant.findById(id);
     if (!participant) return errorResponse('Participant not found', 404);
 
-    const caller = await requireFestAccess(participant.festId.toString());
+    const caller = await requireOrgFestAccess(participant.festId.toString());
     if (!caller) return errorResponse('Unauthorized', 403);
 
     const body = await req.json();
@@ -46,7 +46,7 @@ export const DELETE = withErrorHandler(async (req: Request, context: { params: P
     const participant = await Participant.findById(id);
     if (!participant) return errorResponse('Participant not found', 404);
 
-    const caller = await requireFestAccess(participant.festId.toString());
+    const caller = await requireOrgFestAccess(participant.festId.toString());
     if (!caller) return errorResponse('Unauthorized', 403);
 
     const entryCount = await ProgramEntry.countDocuments({ participantId: id });

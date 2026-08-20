@@ -93,16 +93,29 @@ export const createUserSchema = z.object({
     email: z.string().email('Invalid email format').optional(),
     phone: z.string().min(10, 'Phone must be at least 10 digits').max(15, 'Phone too long').trim().optional(),
     password: z.string().min(8, 'Password must be at least 8 characters').optional(),
-    role: z.enum(['super-admin', 'event-admin', 'judge', 'student']),
+    role: z.enum(['product-admin', 'super-admin', 'event-admin', 'judge', 'student']),
+    organizationId: z.string().optional(), // required only when a Product Admin creates on behalf of an org
     festIds: z.array(z.string()).optional(),
 });
 
 export const updateUserSchema = z.object({
     id: z.string().min(1, 'User ID is required'),
     name: z.string().min(1).max(100).optional(),
-    role: z.enum(['super-admin', 'event-admin', 'judge', 'student']).optional(),
+    role: z.enum(['product-admin', 'super-admin', 'event-admin', 'judge', 'student']).optional(),
     festIds: z.array(z.string()).optional(),
     isActive: z.boolean().optional(),
+});
+
+// Self-service signup — creates a Super Admin account with no organization yet.
+export const signupSchema = z.object({
+    name: z.string().min(1, 'Name is required').max(100, 'Name too long').trim(),
+    email: z.string().email('Invalid email format').trim(),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+// Organization creation — the "name your organization" onboarding step.
+export const createOrganizationSchema = z.object({
+    name: z.string().min(1, 'Organization name is required').max(200, 'Organization name too long').trim(),
 });
 
 // Fest validation

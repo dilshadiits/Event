@@ -1,6 +1,6 @@
 import dbConnect from '@/lib/mongodb';
 import { Program, ProgramEntry, Score } from '@/models';
-import { errorResponse, successResponse, withErrorHandler, requireFestAccess } from '@/lib/api-utils';
+import { errorResponse, successResponse, withErrorHandler, requireOrgFestAccess } from '@/lib/api-utils';
 import { shuffleProgramSchema, isValidObjectId } from '@/lib/validate';
 import { shuffleChestNumbers } from '@/lib/chestNumbers';
 
@@ -16,7 +16,7 @@ export const POST = withErrorHandler(async (req: Request, context: { params: Pro
     const program = await Program.findById(id);
     if (!program) return errorResponse('Program not found', 404);
 
-    const caller = await requireFestAccess(program.festId.toString());
+    const caller = await requireOrgFestAccess(program.festId.toString());
     if (!caller) return errorResponse('Unauthorized', 403);
 
     const body = await req.json().catch(() => ({}));

@@ -1,6 +1,6 @@
 import dbConnect from '@/lib/mongodb';
 import { Fest, Program, ProgramEntry, Team, Participant } from '@/models';
-import { errorResponse, successResponse, withErrorHandler, requireFestAccess } from '@/lib/api-utils';
+import { errorResponse, successResponse, withErrorHandler, requireOrgFestAccess } from '@/lib/api-utils';
 import { isValidObjectId } from '@/lib/validate';
 import { computeRanks, computeTeamPoints } from '@/lib/scoring';
 
@@ -28,7 +28,7 @@ export const GET = withErrorHandler(async (req: Request, context: { params: Prom
     if (!fest) return errorResponse('Fest not found', 404);
 
     if (isAdmin) {
-        const caller = await requireFestAccess(id);
+        const caller = await requireOrgFestAccess(id);
         if (!caller) return errorResponse('Unauthorized', 403);
     } else if (!fest.resultsArePublic) {
         return errorResponse('Results are not public yet', 404);

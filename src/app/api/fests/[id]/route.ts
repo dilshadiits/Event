@@ -1,6 +1,6 @@
 import dbConnect from '@/lib/mongodb';
 import { Fest, Team, Program } from '@/models';
-import { errorResponse, successResponse, withErrorHandler, requireFestAccess, requireRole } from '@/lib/api-utils';
+import { errorResponse, successResponse, withErrorHandler, requireOrgFestAccess } from '@/lib/api-utils';
 import { updateFestSchema, isValidObjectId } from '@/lib/validate';
 
 // GET /api/fests/[id] - fest detail (Super Admin, or Event Admin scoped to this fest)
@@ -8,7 +8,7 @@ export const GET = withErrorHandler(async (req: Request, context: { params: Prom
     const { id } = await context.params;
     if (!isValidObjectId(id)) return errorResponse('Invalid fest ID', 400);
 
-    const caller = await requireFestAccess(id);
+    const caller = await requireOrgFestAccess(id);
     if (!caller) return errorResponse('Unauthorized', 403);
 
     await dbConnect();
@@ -17,6 +17,7 @@ export const GET = withErrorHandler(async (req: Request, context: { params: Prom
 
     return successResponse({
         id: fest._id.toString(),
+        organizationId: fest.organizationId?.toString(),
         name: fest.name,
         description: fest.description,
         startDate: fest.startDate,
@@ -38,7 +39,7 @@ export const PUT = withErrorHandler(async (req: Request, context: { params: Prom
     const { id } = await context.params;
     if (!isValidObjectId(id)) return errorResponse('Invalid fest ID', 400);
 
-    const caller = await requireFestAccess(id);
+    const caller = await requireOrgFestAccess(id);
     if (!caller) return errorResponse('Unauthorized', 403);
 
     const body = await req.json();
@@ -66,13 +67,13 @@ export const PUT = withErrorHandler(async (req: Request, context: { params: Prom
     return successResponse({ id: fest._id.toString(), name: fest.name });
 });
 
-// DELETE /api/fests/[id] - Super Admin only, blocked if teams/programs already exist
+// DELETE /api/fests/[id] - Super Admin (own org) or Product Admin only, blocked if teams/programs already exist
 export const DELETE = withErrorHandler(async (req: Request, context: { params: Promise<{ id: string }> }) => {
-    const caller = await requireRole(['super-admin']);
-    if (!caller) return errorResponse('Unauthorized', 403);
-
     const { id } = await context.params;
     if (!isValidObjectId(id)) return errorResponse('Invalid fest ID', 400);
+
+    const caller = await requireOrgFestAccess(id);
+    if (!caller || caller.role === 'event-admin') return errorResponse('Unauthorized', 403);
 
     await dbConnect();
 

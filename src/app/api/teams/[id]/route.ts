@@ -1,6 +1,6 @@
 import dbConnect from '@/lib/mongodb';
 import { Team, Participant, ProgramEntry } from '@/models';
-import { errorResponse, successResponse, withErrorHandler, requireFestAccess } from '@/lib/api-utils';
+import { errorResponse, successResponse, withErrorHandler, requireOrgFestAccess } from '@/lib/api-utils';
 import { updateTeamSchema, sanitizeString, isValidObjectId } from '@/lib/validate';
 
 // PUT /api/teams/[id]
@@ -12,7 +12,7 @@ export const PUT = withErrorHandler(async (req: Request, context: { params: Prom
     const team = await Team.findById(id);
     if (!team) return errorResponse('Team not found', 404);
 
-    const caller = await requireFestAccess(team.festId.toString());
+    const caller = await requireOrgFestAccess(team.festId.toString());
     if (!caller) return errorResponse('Unauthorized', 403);
 
     const body = await req.json();
@@ -37,7 +37,7 @@ export const DELETE = withErrorHandler(async (req: Request, context: { params: P
     const team = await Team.findById(id);
     if (!team) return errorResponse('Team not found', 404);
 
-    const caller = await requireFestAccess(team.festId.toString());
+    const caller = await requireOrgFestAccess(team.festId.toString());
     if (!caller) return errorResponse('Unauthorized', 403);
 
     const [participantCount, entryCount] = await Promise.all([

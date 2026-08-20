@@ -1,6 +1,6 @@
 import dbConnect from '@/lib/mongodb';
 import { Program } from '@/models';
-import { errorResponse, successResponse, withErrorHandler, requireFestAccess } from '@/lib/api-utils';
+import { errorResponse, successResponse, withErrorHandler, requireOrgFestAccess } from '@/lib/api-utils';
 import { createProgramSchema, sanitizeString, isValidObjectId } from '@/lib/validate';
 
 // GET /api/programs?festId=xxx
@@ -9,7 +9,7 @@ export const GET = withErrorHandler(async (req: Request) => {
     const festId = searchParams.get('festId');
     if (!festId || !isValidObjectId(festId)) return errorResponse('Valid fest ID is required', 400);
 
-    const caller = await requireFestAccess(festId);
+    const caller = await requireOrgFestAccess(festId);
     if (!caller) return errorResponse('Unauthorized', 403);
 
     await dbConnect();
@@ -37,7 +37,7 @@ export const POST = withErrorHandler(async (req: Request) => {
     const validated = createProgramSchema.parse(body);
     if (!isValidObjectId(validated.festId)) return errorResponse('Invalid fest ID', 400);
 
-    const caller = await requireFestAccess(validated.festId);
+    const caller = await requireOrgFestAccess(validated.festId);
     if (!caller) return errorResponse('Unauthorized', 403);
 
     await dbConnect();

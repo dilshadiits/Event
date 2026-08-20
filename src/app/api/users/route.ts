@@ -4,16 +4,19 @@ import { User } from '@/models';
 import { errorResponse, successResponse, withErrorHandler, requireRole } from '@/lib/api-utils';
 import { createUserSchema, isValidObjectId } from '@/lib/validate';
 
-// GET /api/users?role=&festId= - list accounts.
-// Super Admin sees everyone. Event Admin only sees judges scoped to their own fests
-// (needed to populate judge-panel pickers) — never other admins' accounts.
+// GET /api/users?role=&festId=&organizationId= - list accounts.
+// Product Admin sees everyone across every organization (optionally narrowed to one
+// via organizationId). Super Admin sees only their own organization's accounts.
+// Event Admin only sees judges scoped to their own fests (needed to populate
+// judge-panel pickers) — never other admins' accounts.
 export const GET = withErrorHandler(async (req: Request) => {
-    const caller = await requireRole(['super-admin', 'event-admin']);
+    const caller = await requireRole(['product-admin', 'super-admin', 'event-admin']);
     if (!caller) return errorResponse('Unauthorized', 403);
 
     const { searchParams } = new URL(req.url);
     const roleFilter = searchParams.get('role');
     const festId = searchParams.get('festId');
+    const orgParam = searchParams.get('organizationId');
 
     await dbConnect();
 
@@ -27,6 +30,11 @@ export const GET = withErrorHandler(async (req: Request) => {
             filter.festIds = festId;
         }
     } else {
+        if (caller.role === 'super-admin') {
+            filter.organizationId = caller.organizationId;
+        } else if (orgParam && isValidObjectId(orgParam)) {
+            filter.organizationId = orgParam;
+        }
         if (roleFilter) filter.role = roleFilter;
         if (festId && isValidObjectId(festId)) filter.festIds = festId;
     }
@@ -39,39 +47,63 @@ export const GET = withErrorHandler(async (req: Request) => {
         email: u.email,
         phone: u.phone,
         role: u.role,
+        organizationId: u.organizationId?.toString(),
         festIds: (u.festIds || []).map((f: unknown) => String(f)),
         isActive: u.isActive,
     })));
 });
 
-// POST /api/users - create a new user.
-// Super Admin can create any role. Event Admin can only create Judges, scoped to
-// fests they themselves have access to. Exception: if no Super Admin exists yet,
-// a request carrying the correct BOOTSTRAP_SECRET may create the first one
-// (one-time setup — there is no login yet at that point).
+// POST /api/users - create an Event Admin, Judge, or (rarely) another Product Admin.
+// Super Admin accounts are never created here — they're created exclusively through
+// /signup + the organization-onboarding flow, since each one owns a brand new
+// organization. Exception: if no Product Admin exists yet at all, a request carrying
+// the correct BOOTSTRAP_SECRET may create the very first one (one-time platform
+// setup — there is no login yet at that point).
 export const POST = withErrorHandler(async (req: Request) => {
     const body = await req.json();
     const validated = createUserSchema.parse(body);
 
+    if (validated.role === 'super-admin') {
+        return errorResponse('Super Admin accounts are created by signing up at /signup, not here', 400);
+    }
+
     await dbConnect();
 
-    const superAdminExists = await User.exists({ role: 'super-admin' });
-
     let festIds = validated.festIds;
+    let organizationId: string | undefined;
 
-    if (!superAdminExists && validated.role === 'super-admin') {
-        const bootstrapSecret = process.env.BOOTSTRAP_SECRET;
-        if (!bootstrapSecret || body.bootstrapSecret !== bootstrapSecret) {
-            return errorResponse('Bootstrap secret required to create the first Super Admin', 403);
+    if (validated.role === 'product-admin') {
+        const productAdminExists = await User.exists({ role: 'product-admin' });
+        if (!productAdminExists) {
+            const bootstrapSecret = process.env.BOOTSTRAP_SECRET;
+            if (!bootstrapSecret || body.bootstrapSecret !== bootstrapSecret) {
+                return errorResponse('Bootstrap secret required to create the first Product Admin', 403);
+            }
+        } else {
+            const caller = await requireRole(['product-admin']);
+            if (!caller) return errorResponse('Unauthorized', 403);
         }
+        // product-admin has no organization
     } else {
-        const caller = await requireRole(['super-admin', 'event-admin']);
+        // event-admin or judge
+        const caller = await requireRole(['product-admin', 'super-admin', 'event-admin']);
         if (!caller) return errorResponse('Unauthorized', 403);
 
-        if (caller.role === 'event-admin') {
-            if (validated.role !== 'judge') {
-                return errorResponse('Event Admins may only create Judge accounts', 403);
+        if (caller.role === 'event-admin' && validated.role !== 'judge') {
+            return errorResponse('Event Admins may only create Judge accounts', 403);
+        }
+
+        if (caller.role === 'product-admin') {
+            if (!validated.organizationId || !isValidObjectId(validated.organizationId)) {
+                return errorResponse('A valid organizationId is required', 400);
             }
+            organizationId = validated.organizationId;
+        } else {
+            if (!caller.organizationId) return errorResponse('Your account has no organization', 400);
+            organizationId = caller.organizationId;
+        }
+
+        if (caller.role === 'event-admin') {
             const requested = validated.festIds || [];
             const allowed = requested.filter(f => (caller.festIds || []).includes(f));
             if (allowed.length === 0) {
@@ -81,7 +113,7 @@ export const POST = withErrorHandler(async (req: Request) => {
         }
     }
 
-    if (['super-admin', 'event-admin', 'judge'].includes(validated.role)) {
+    if (['product-admin', 'event-admin', 'judge'].includes(validated.role)) {
         if (!validated.email || !validated.password) {
             return errorResponse('Email and password are required for this role', 400);
         }
@@ -97,6 +129,7 @@ export const POST = withErrorHandler(async (req: Request) => {
         phone: validated.phone,
         passwordHash,
         role: validated.role,
+        organizationId,
         festIds,
     });
 

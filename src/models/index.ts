@@ -136,24 +136,37 @@ const AwardRecipientSchema = new mongoose.Schema({
 
 export const AwardRecipient = mongoose.models.AwardRecipient || mongoose.model('AwardRecipient', AwardRecipientSchema);
 
-// ---- Competitions module (fests, teams, programs, judging, standings) ----
+// ---- Competitions module (organizations, fests, teams, programs, judging, standings) ----
 
-// User - multi-role auth (super-admin, event-admin, judge, student)
+// Organization - a tenant. Everything below Fest belongs to exactly one of these.
+// product-admin accounts sit above all organizations and have no organizationId.
+const OrganizationSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    slug: { type: String, required: true, unique: true },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    isActive: { type: Boolean, default: true },
+    createdAt: { type: Date, default: Date.now },
+});
+export const Organization = mongoose.models.Organization || mongoose.model('Organization', OrganizationSchema);
+
+// User - multi-role auth (product-admin, super-admin, event-admin, judge, student)
 const UserSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, index: true, sparse: true },
     phone: { type: String, index: true, sparse: true },
-    passwordHash: { type: String }, // for super-admin / event-admin / judge credentials login
-    role: { type: String, enum: ['super-admin', 'event-admin', 'judge', 'student'], required: true },
-    festIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Fest' }], // scopes event-admin / judge access
+    passwordHash: { type: String }, // for product-admin / super-admin / event-admin / judge credentials login
+    role: { type: String, enum: ['product-admin', 'super-admin', 'event-admin', 'judge', 'student'], required: true },
+    organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', index: true }, // unset only for product-admin
+    festIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Fest' }], // scopes event-admin / judge access within their org
     participantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Participant' }, // set for role: 'student'
     isActive: { type: Boolean, default: true },
     createdAt: { type: Date, default: Date.now },
 });
 export const User = mongoose.models.User || mongoose.model('User', UserSchema);
 
-// Fest - top-level competition/festival container, sibling to Event/AwardEvent
+// Fest - top-level competition/festival container, sibling to Event/AwardEvent, owned by one Organization
 const FestSchema = new mongoose.Schema({
+    organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
     name: { type: String, required: true },
     description: { type: String },
     startDate: { type: String },

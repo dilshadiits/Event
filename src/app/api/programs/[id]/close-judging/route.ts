@@ -1,6 +1,6 @@
 import dbConnect from '@/lib/mongodb';
 import { Program, ProgramEntry } from '@/models';
-import { errorResponse, successResponse, withErrorHandler, requireFestAccess } from '@/lib/api-utils';
+import { errorResponse, successResponse, withErrorHandler, requireOrgFestAccess } from '@/lib/api-utils';
 import { isValidObjectId } from '@/lib/validate';
 
 // POST /api/programs/[id]/close-judging - admin action that locks further score writes.
@@ -14,7 +14,7 @@ export const POST = withErrorHandler(async (req: Request, context: { params: Pro
     const program = await Program.findById(id);
     if (!program) return errorResponse('Program not found', 404);
 
-    const caller = await requireFestAccess(program.festId.toString());
+    const caller = await requireOrgFestAccess(program.festId.toString());
     if (!caller) return errorResponse('Unauthorized', 403);
 
     if (program.status === 'judging-closed' || program.status === 'results-published') {

@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 import dbConnect from '@/lib/mongodb';
 import { Participant, Team } from '@/models';
-import { errorResponse, successResponse, withErrorHandler, requireFestAccess } from '@/lib/api-utils';
+import { errorResponse, successResponse, withErrorHandler, requireOrgFestAccess } from '@/lib/api-utils';
 import { isValidObjectId, sanitizeString } from '@/lib/validate';
 
 // POST /api/participants/bulk-import - multipart form: festId + Excel file
@@ -19,7 +19,7 @@ export const POST = withErrorHandler(async (req: Request) => {
         return errorResponse('Excel file is required', 400);
     }
 
-    const caller = await requireFestAccess(festId);
+    const caller = await requireOrgFestAccess(festId);
     if (!caller) return errorResponse('Unauthorized', 403);
 
     const buffer = await file.arrayBuffer();

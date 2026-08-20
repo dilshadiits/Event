@@ -14,11 +14,14 @@ const PUBLIC_ROUTES = [
     '/register/', // Matches /register/[id]
     '/vote/',   // Matches /vote/[eventId]
     '/results/', // Public competition results (unauthenticated)
-    // These are protected by src/middleware.ts + NextAuth roles instead of the shared
+    // These are protected by src/proxy.ts + NextAuth roles instead of the shared
     // admin password — PasswordGate steps aside so it doesn't double-gate them.
     '/admin/competitions',
     '/judge',
     '/student',
+    '/product-admin',
+    '/signup', // self-service account creation
+    '/onboarding', // "name your organization" onboarding step
 ];
 
 // Check if current path is a public route

@@ -1,6 +1,6 @@
 import dbConnect from '@/lib/mongodb';
 import { Program, ProgramEntry, Participant, Team } from '@/models';
-import { errorResponse, successResponse, withErrorHandler, requireFestAccess } from '@/lib/api-utils';
+import { errorResponse, successResponse, withErrorHandler, requireOrgFestAccess } from '@/lib/api-utils';
 import { isValidObjectId } from '@/lib/validate';
 
 // GET /api/programs/[id]/report - attendance breakdown for a program: total entries,
@@ -14,7 +14,7 @@ export const GET = withErrorHandler(async (req: Request, context: { params: Prom
     const program = await Program.findById(id).lean();
     if (!program) return errorResponse('Program not found', 404);
 
-    const caller = await requireFestAccess(program.festId.toString());
+    const caller = await requireOrgFestAccess(program.festId.toString());
     if (!caller) return errorResponse('Unauthorized', 403);
 
     const entries = await ProgramEntry.find({ programId: id }).lean();

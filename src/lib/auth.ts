@@ -28,7 +28,7 @@ export const authOptions: AuthOptions = {
                 await dbConnect();
                 const user = await User.findOne({
                     email: credentials.email.toLowerCase().trim(),
-                    role: { $in: ['super-admin', 'event-admin', 'judge'] },
+                    role: { $in: ['product-admin', 'super-admin', 'event-admin', 'judge'] },
                     isActive: true,
                 });
                 if (!user || !user.passwordHash) return null;
@@ -41,6 +41,7 @@ export const authOptions: AuthOptions = {
                     email: user.email,
                     name: user.name,
                     role: user.role,
+                    organizationId: user.organizationId ? String(user.organizationId) : undefined,
                     festIds: (user.festIds || []).map((f: unknown) => String(f)),
                 };
             },
@@ -80,17 +81,26 @@ export const authOptions: AuthOptions = {
     secret: process.env.NEXTAUTH_SECRET,
     session: { strategy: 'jwt' },
     callbacks: {
-        async jwt({ token, account, profile, user }) {
+        async jwt({ token, account, profile, user, trigger }) {
             if (account && profile) {
                 // Google OAuth voter identity (existing /awards/[id]/vote flow) — unchanged
                 token.email = profile.email;
             }
             if (user) {
-                const u = user as unknown as { role?: string; festIds?: string[]; participantId?: string; id?: string };
+                const u = user as unknown as { role?: string; organizationId?: string; festIds?: string[]; participantId?: string; id?: string };
                 if (u.role) token.role = u.role;
+                if (u.organizationId) token.organizationId = u.organizationId;
                 if (u.festIds) token.festIds = u.festIds;
                 if (u.participantId) token.participantId = u.participantId;
                 if (u.id) token.userId = u.id;
+            }
+            // Explicit client-side session.update() call — used right after the
+            // onboarding step sets a Super Admin's organizationId for the first time,
+            // so the session reflects it without a full re-login.
+            if (trigger === 'update' && token.userId) {
+                await dbConnect();
+                const fresh = await User.findById(token.userId).select('organizationId').lean();
+                if (fresh?.organizationId) token.organizationId = String(fresh.organizationId);
             }
             return token;
         },
@@ -100,6 +110,7 @@ export const authOptions: AuthOptions = {
             }
             if (session.user) {
                 session.user.role = token.role as string | undefined;
+                session.user.organizationId = token.organizationId as string | undefined;
                 session.user.festIds = token.festIds as string[] | undefined;
                 session.user.participantId = token.participantId as string | undefined;
                 session.user.id = token.userId as string | undefined;

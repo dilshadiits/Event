@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import dbConnect from '@/lib/mongodb';
+import { Fest } from '@/models';
 
 // Standardized error response
 export function errorResponse(message: string, status: number = 500) {
@@ -89,6 +91,36 @@ export async function requireRole(roles: string[]) {
     const role = session?.user?.role;
     if (!role || !roles.includes(role)) return null;
     return session.user;
+}
+
+// Require the current session to be a product-admin (full cross-org access), or a
+// super-admin/event-admin belonging to the given organization. For routes that
+// operate above any single fest — listing fests, org settings, managing accounts.
+export async function requireOrgAccess(organizationId: string) {
+    const user = await requireRole(['product-admin', 'super-admin', 'event-admin']);
+    if (!user) return null;
+    if (user.role === 'product-admin') return user;
+    if (user.organizationId === organizationId) return user;
+    return null;
+}
+
+// Require the current session to be a product-admin, or a super-admin/event-admin
+// whose organization owns the given fest (event-admin additionally needs the fest in
+// their own festIds). Loads the fest to verify organization ownership — a super-admin
+// is no longer implicitly omnipotent across every fest in the database, only their
+// own organization's.
+export async function requireOrgFestAccess(festId: string) {
+    const user = await requireRole(['product-admin', 'super-admin', 'event-admin']);
+    if (!user) return null;
+    if (user.role === 'product-admin') return user;
+
+    await dbConnect();
+    const fest = await Fest.findById(festId).select('organizationId').lean();
+    if (!fest || String(fest.organizationId) !== user.organizationId) return null;
+
+    if (user.role === 'super-admin') return user;
+    if (user.festIds?.includes(festId)) return user; // event-admin
+    return null;
 }
 
 // Require the current session to be a super-admin, or an event-admin scoped to the
