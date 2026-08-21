@@ -56,16 +56,28 @@ export default function Home() {
     e.preventDefault();
     e.stopPropagation();
     if (!confirm('Are you sure you want to delete this event? All attendees will be removed.')) return;
-
-    try {
-      const res = await fetch(`/api/events?id=${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        fetchEvents();
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+            {/* Nav */}
+            <header className="max-w-6xl mx-auto px-4 md:px-8 pt-6 md:pt-8 flex items-center justify-between relative z-10">
+                <span
+                    className={`${logoFont.className} text-white text-3xl tracking-wide`}
+                    style={{ fontStyle: 'italic' }} // next/font bakes font-style: normal into its own
+                    // class at equal specificity to Tailwind's `italic`, so the class alone loses the
+                    // cascade — an inline style is the reliable way to force the slant.
+                >
+                    Podium
+                </span>
+                <nav className="flex items-center gap-2 sm:gap-3">
+                    <Link href="/login" className="text-sm text-muted-foreground hover:text-white transition-colors px-2">
+                        Sign in
+                    </Link>
+                    <Link
+                        href="/get-started"
+                        className="flex items-center gap-1.5 bg-white text-black hover:bg-gray-200 px-4 py-2 rounded-full text-sm font-bold transition-colors"
+                    >
+                        Get Started
+                    </Link>
+                </nav>
+            </header>
 
   const fetchEvents = async () => {
     try {
