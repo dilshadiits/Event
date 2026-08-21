@@ -94,7 +94,7 @@ export default function GetStartedPage() {
             {/* Footer — classic tools, kept discoverable but low-emphasis */}
             <footer className="max-w-6xl mx-auto px-4 md:px-8 pb-10">
                 <div className="border-t border-border pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
-                    <span>&copy; {new Date().getFullYear()} Event</span>
+                    <span>&copy; {new Date().getFullYear()} Podium</span>
                     <div className="flex items-center gap-4">
                         <Link href="/events" className="hover:text-white transition-colors flex items-center gap-1.5">
                             <QrCode className="w-3.5 h-3.5" /> Attendance tools

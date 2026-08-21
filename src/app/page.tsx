@@ -82,12 +82,12 @@ export default function MarketingLandingPage() {
             {/* Nav */}
             <header className="max-w-6xl mx-auto px-4 md:px-8 pt-6 md:pt-8 flex items-center justify-between relative z-10">
                 <span
-                    className={`${logoFont.className} text-white text-2xl tracking-wide`}
+                    className={`${logoFont.className} text-white text-4xl tracking-wide`}
                     style={{ fontStyle: 'italic' }} // next/font bakes font-style: normal into its own
                     // class at equal specificity to Tailwind's `italic`, so the class alone loses the
                     // cascade — an inline style is the reliable way to force the slant.
                 >
-                    Event
+                    Podium
                 </span>
                 <nav className="flex items-center gap-2 sm:gap-3">
                     <Link href="/login" className="text-sm text-muted-foreground hover:text-white transition-colors px-2">
@@ -280,7 +280,7 @@ export default function MarketingLandingPage() {
                 <div className="border-t border-border pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                         <Building2 className="w-4 h-4" />
-                        <span>&copy; {new Date().getFullYear()} Event</span>
+                        <span>&copy; {new Date().getFullYear()} Podium</span>
                     </div>
                     <div className="flex items-center gap-5">
                         <Link href="/get-started" className="hover:text-white transition-colors">Get Started</Link>

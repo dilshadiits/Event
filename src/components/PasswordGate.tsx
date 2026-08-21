@@ -128,7 +128,7 @@ export default function PasswordGate({ children }: PasswordGateProps) {
                         <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl sm:rounded-2xl mb-4">
                             <Lock className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
                         </div>
-                        <h1 className="text-xl sm:text-2xl font-bold text-white">Event QR Manager</h1>
+                        <h1 className="text-xl sm:text-2xl font-bold text-white">Podium</h1>
                         <p className="text-sm sm:text-base text-muted-foreground mt-2">Enter credentials to continue</p>
                     </div>
 

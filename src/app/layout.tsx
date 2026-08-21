@@ -23,12 +23,12 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Event QR Manager",
-  description: "Generate and Scan QR Codes for Event Attendance",
+  title: "Podium",
+  description: "Run your fest — teams, blind judging, live standings, and QR check-in.",
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'QR Manager',
+    title: 'Podium',
   },
   formatDetection: {
     telephone: false,
