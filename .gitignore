@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# credentials sheet (plaintext demo/seed passwords — never commit)
+CREDENTIALS.md
+
 # vercel
 .vercel
 
