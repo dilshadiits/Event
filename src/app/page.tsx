@@ -68,11 +68,11 @@ const colorMap: Record<string, string> = {
 
 export default function MarketingLandingPage() {
     return (
-        <main className="min-h-screen overflow-x-hidden">
+        <main className="min-h-screen">
             {/* Ambient background texture */}
             <div
                 aria-hidden
-                className="fixed inset-0 -z-10 opacity-[0.15]"
+                className="fixed inset-0 -z-10 opacity-[0.15] pointer-events-none"
                 style={{
                     backgroundImage: 'radial-gradient(circle, hsl(213 31% 91% / 0.4) 1px, transparent 1px)',
                     backgroundSize: '28px 28px',
