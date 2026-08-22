@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState, use, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, RefreshCw, Globe, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Loader2, RefreshCw, Globe, Copy, Check, QrCode } from 'lucide-react';
 import StandingsTable from '@/components/StandingsTable';
+import StandingsQRModal from '@/components/StandingsQRModal';
 
 interface Standing {
     teamId: string;
@@ -22,10 +23,12 @@ export default function AdminStandingsPage({ params }: { params: Promise<{ festI
     const [standings, setStandings] = useState<Standing[]>([]);
     const [programs, setPrograms] = useState<ProgramBreakdown[]>([]);
     const [resultsArePublic, setResultsArePublic] = useState(false);
+    const [festName, setFestName] = useState('');
     const [loading, setLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [togglingPublic, setTogglingPublic] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [showQR, setShowQR] = useState(false);
 
     const fetchStandings = useCallback(async (showRefresh = false) => {
         if (showRefresh) setIsRefreshing(true);
@@ -36,6 +39,7 @@ export default function AdminStandingsPage({ params }: { params: Promise<{ festI
                 setStandings(data.standings);
                 setPrograms(data.programs || []);
                 setResultsArePublic(!!data.fest?.resultsArePublic);
+                setFestName(data.fest?.name || '');
             }
         } catch (err) {
             console.error(err);
@@ -90,15 +94,20 @@ export default function AdminStandingsPage({ params }: { params: Promise<{ festI
                     <Globe className="w-4 h-4" />
                     {resultsArePublic ? 'Results are Public' : 'Results are Private'}
                 </button>
-                {resultsArePublic && (
-                    <button
-                        onClick={copyPublicLink}
-                        className="flex items-center gap-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-4 py-2 rounded-lg text-sm font-medium transition-all border border-blue-500/30"
-                    >
-                        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                        {copied ? 'Copied!' : 'Copy Public Link'}
-                    </button>
-                )}
+                <button
+                    onClick={copyPublicLink}
+                    className="flex items-center gap-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-4 py-2 rounded-lg text-sm font-medium transition-all border border-blue-500/30"
+                >
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {copied ? 'Copied!' : 'Copy Public Link'}
+                </button>
+                <button
+                    onClick={() => setShowQR(true)}
+                    className="flex items-center gap-2 bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 px-4 py-2 rounded-lg text-sm font-medium transition-all border border-purple-500/30"
+                >
+                    <QrCode className="w-4 h-4" />
+                    Show QR
+                </button>
                 <button
                     onClick={() => fetchStandings(true)}
                     className="flex items-center gap-2 bg-muted/50 hover:bg-muted text-muted-foreground px-4 py-2 rounded-lg text-sm font-medium transition-all border border-border ml-auto"
@@ -134,6 +143,14 @@ export default function AdminStandingsPage({ params }: { params: Promise<{ festI
                     </div>
                 </div>
             )}
+
+            <StandingsQRModal
+                url={typeof window !== 'undefined' ? `${window.location.origin}/results/${festId}` : `/results/${festId}`}
+                title={festName}
+                isOpen={showQR}
+                onClose={() => setShowQR(false)}
+                resultsArePublic={resultsArePublic}
+            />
         </main>
     );
 }
