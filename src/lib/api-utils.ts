@@ -95,7 +95,7 @@ export async function requireRole(roles: string[]) {
 
 // Require the current session to be a product-admin (full cross-org access), or a
 // super-admin/event-admin belonging to the given organization. For routes that
-// operate above any single fest — listing fests, org settings, managing accounts.
+// operate above any single fest - listing fests, org settings, managing accounts.
 export async function requireOrgAccess(organizationId: string) {
     const user = await requireRole(['product-admin', 'super-admin', 'event-admin']);
     if (!user) return null;
@@ -106,7 +106,7 @@ export async function requireOrgAccess(organizationId: string) {
 
 // Require the current session to be a product-admin, or a super-admin/event-admin
 // whose organization owns the given fest (event-admin additionally needs the fest in
-// their own festIds). Loads the fest to verify organization ownership — a super-admin
+// their own festIds). Loads the fest to verify organization ownership - a super-admin
 // is no longer implicitly omnipotent across every fest in the database, only their
 // own organization's.
 export async function requireOrgFestAccess(festId: string) {

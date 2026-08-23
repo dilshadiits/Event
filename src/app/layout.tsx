@@ -24,7 +24,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "Podium",
-  description: "Run your fest — teams, blind judging, live standings, and QR check-in.",
+  description: "Run your fest - teams, blind judging, live standings, and QR check-in.",
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',

@@ -40,7 +40,7 @@ export default function SignupPage() {
         if (signInRes?.ok) {
             router.push('/onboarding/organization');
         } else {
-            setError('Account created, but sign-in failed — try signing in manually.');
+            setError('Account created, but sign-in failed - try signing in manually.');
         }
         setLoading(false);
     };

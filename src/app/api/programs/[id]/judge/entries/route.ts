@@ -4,7 +4,7 @@ import { errorResponse, successResponse, withErrorHandler, requireRole } from '@
 import { isValidObjectId } from '@/lib/validate';
 
 // GET /api/programs/[id]/judge/entries - a judge's own scoring worklist.
-// Deliberately never returns participant/team names — only chest numbers — so a real
+// Deliberately never returns participant/team names - only chest numbers - so a real
 // name never crosses the network to a judge's device, regardless of any display flag.
 export const GET = withErrorHandler(async (req: Request, context: { params: Promise<{ id: string }> }) => {
     const { id } = await context.params;

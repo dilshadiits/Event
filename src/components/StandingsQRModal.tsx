@@ -49,7 +49,7 @@ export default function StandingsQRModal({ url, title, isOpen, onClose, resultsA
 
                     {!resultsArePublic && (
                         <p className="text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2">
-                            Results are currently private — scanning this QR won&apos;t show standings until you switch results to public.
+                            Results are currently private - scanning this QR won&apos;t show standings until you switch results to public.
                         </p>
                     )}
 

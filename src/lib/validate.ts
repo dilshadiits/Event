@@ -106,14 +106,14 @@ export const updateUserSchema = z.object({
     isActive: z.boolean().optional(),
 });
 
-// Self-service signup — creates a Super Admin account with no organization yet.
+// Self-service signup - creates a Super Admin account with no organization yet.
 export const signupSchema = z.object({
     name: z.string().min(1, 'Name is required').max(100, 'Name too long').trim(),
     email: z.string().email('Invalid email format').trim(),
     password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
-// Organization creation — the "name your organization" onboarding step.
+// Organization creation - the "name your organization" onboarding step.
 export const createOrganizationSchema = z.object({
     name: z.string().min(1, 'Organization name is required').max(200, 'Organization name too long').trim(),
 });

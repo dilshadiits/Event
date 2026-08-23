@@ -250,7 +250,7 @@ const ProgramEntrySchema = new mongoose.Schema({
     totalScore: { type: Number },
     createdAt: { type: Date, default: Date.now },
 });
-// NOTE: `sparse: true` alone does NOT skip these documents — for a compound index,
+// NOTE: `sparse: true` alone does NOT skip these documents - for a compound index,
 // Mongo only omits a doc from a sparse index if ALL indexed fields are missing, and
 // programId is always present. Since chestNumber/participantId/teamId are each
 // optional on their own (assigned later, or mutually exclusive by entry type), a

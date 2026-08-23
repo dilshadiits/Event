@@ -25,7 +25,7 @@ export default function ScoreInput({ criterion, value, onChange }: ScoreInputPro
             <div className="flex items-center justify-between">
                 <span className="font-medium text-white">{criterion.label}</span>
                 <span className="text-2xl font-bold text-orange-400 tabular-nums">
-                    {value ?? '—'}<span className="text-sm text-muted-foreground">/{criterion.maxScore}</span>
+                    {value ?? '-'}<span className="text-sm text-muted-foreground">/{criterion.maxScore}</span>
                 </span>
             </div>
 

@@ -6,7 +6,7 @@ import { shuffleChestNumbers } from '@/lib/chestNumbers';
 
 // POST /api/programs/[id]/shuffle - assign fresh chest numbers to every entry in this
 // program. Blocked once judging has started (any Score exists) unless force=true is
-// passed — re-shuffling after that would silently invalidate scores already tied to
+// passed - re-shuffling after that would silently invalidate scores already tied to
 // chest numbers a judge saw, so it requires an explicit admin confirmation.
 export const POST = withErrorHandler(async (req: Request, context: { params: Promise<{ id: string }> }) => {
     const { id } = await context.params;

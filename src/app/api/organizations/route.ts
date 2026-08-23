@@ -41,11 +41,11 @@ export const GET = withErrorHandler(async () => {
 });
 
 // POST /api/organizations - the onboarding step. Only for a signed-in Super Admin who
-// doesn't have an organization yet ("one organization per login" — this is the one
+// doesn't have an organization yet ("one organization per login" - this is the one
 // moment that's allowed to change). Not reachable by anyone who already has one.
 //
 // The "doesn't have one yet" check is done against the database with an atomic
-// conditional update, not the caller's session — the session's organizationId is a
+// conditional update, not the caller's session - the session's organizationId is a
 // JWT claim that only refreshes on sign-in or an explicit client-side session
 // update(), so trusting it here would let two requests sent before that refresh both
 // succeed and silently reassign the account to whichever ran last.
@@ -78,7 +78,7 @@ export const POST = withErrorHandler(async (req: Request) => {
     );
 
     if (!claimed) {
-        // Lost the race, or the account already had an org — undo the create.
+        // Lost the race, or the account already had an org - undo the create.
         await Organization.findByIdAndDelete(org._id);
         return errorResponse('Your account already belongs to an organization', 400);
     }

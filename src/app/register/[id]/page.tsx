@@ -108,7 +108,7 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
     }, [registeredUser]);
 
     const generateSinglePass = async (name: string, qrValue: string, isGuest: boolean, channel?: string): Promise<string> => {
-        // Render the QR code to an offscreen canvas first — needed as an overlay
+        // Render the QR code to an offscreen canvas first - needed as an overlay
         // image regardless of which template path below ends up being used.
         const qrCanvas = document.createElement('canvas');
         await new Promise<void>((resolve, reject) => {
@@ -120,7 +120,7 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
         const canvas = document.createElement('canvas');
 
         // Use the event's uploaded template if one exists; otherwise fall back to a
-        // plain white QR card — same graceful-degradation behavior as QRCodeModal,
+        // plain white QR card - same graceful-degradation behavior as QRCodeModal,
         // rather than failing the whole registration flow when no template is set.
         let template: HTMLImageElement | null = null;
         if (entryPassImage) {

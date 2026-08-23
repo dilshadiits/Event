@@ -105,7 +105,7 @@ export const POST = withErrorHandler(async (req: Request) => {
     }
 
     // Create the vote. This flow is phone-only (no name is ever collected on the
-    // /vote/[eventId] page), but Vote.voterName is a required field on the model —
+    // /vote/[eventId] page), but Vote.voterName is a required field on the model -
     // fall back to the phone number itself rather than leaving it unset, which
     // previously made every submission here fail Mongoose validation.
     const vote = await Vote.create({

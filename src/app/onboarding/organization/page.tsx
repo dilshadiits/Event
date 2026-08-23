@@ -13,7 +13,7 @@ export default function CreateOrganizationPage() {
 
     useEffect(() => {
         if (status === 'unauthenticated') router.replace('/login');
-        // Already has an organization — nothing to do here.
+        // Already has an organization - nothing to do here.
         if (status === 'authenticated' && session?.user?.organizationId) {
             router.replace('/admin/competitions');
         }

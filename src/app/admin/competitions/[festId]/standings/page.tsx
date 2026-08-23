@@ -135,7 +135,7 @@ export default function AdminStandingsPage({ params }: { params: Promise<{ festI
                             <span
                                 key={p.programId}
                                 className={`text-xs px-2.5 py-1 rounded-full ${p.official ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}
-                                title={p.official ? 'Officially published' : 'Live preview — not yet published'}
+                                title={p.official ? 'Officially published' : 'Live preview - not yet published'}
                             >
                                 {p.programName} {p.official ? '' : '(preview)'}
                             </span>

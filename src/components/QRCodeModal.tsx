@@ -12,7 +12,7 @@ interface QRCodeModalProps {
     onClose: () => void;
     templateUrl?: string;
     // When false, the participant's name is neither printed on the composited card nor
-    // shown in this modal — used for blind-judging chest cards, which must stay as
+    // shown in this modal - used for blind-judging chest cards, which must stay as
     // anonymous as the judge's own scoring screen.
     showName?: boolean;
     downloadLabel?: string;

@@ -1,7 +1,7 @@
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 
-// Judges sign in through the same /login gateway as Admins (password tab) — only
+// Judges sign in through the same /login gateway as Admins (password tab) - only
 // Students use a distinct query param to preselect the phone/OTP tab.
 function loginPathFor(pathname: string): string {
     if (pathname.startsWith('/student')) return '/login?mode=student';
@@ -21,7 +21,7 @@ export default withAuth(
         const { pathname } = req.nextUrl;
 
         // /login itself isn't under any matched prefix below, so it's never
-        // intercepted by this middleware at all — always reachable by design.
+        // intercepted by this middleware at all - always reachable by design.
         const role = req.nextauth.token?.role as string | undefined;
         if (!roleAllowed(pathname, role)) {
             const url = req.nextUrl.clone();
@@ -48,7 +48,7 @@ export default withAuth(
     },
     {
         callbacks: {
-            // Always let requests through to our own middleware function above —
+            // Always let requests through to our own middleware function above -
             // it does the real role check per-prefix (the login gateway needs to stay
             // reachable for unauthenticated users, which a single static `authorized`
             // gate can't express).

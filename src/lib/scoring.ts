@@ -16,10 +16,10 @@ export interface RankedResult {
 }
 
 // Standard competition ranking ("1224"): entries tied on score share the same rank,
-// and the next distinct score jumps to the count of entries ranked above it — e.g.
+// and the next distinct score jumps to the count of entries ranked above it - e.g.
 // four entries scoring [90, 80, 80, 60] rank as [1, 2, 2, 4]. This was the confirmed
 // tie-break rule: transparent, no hidden tiebreaker judges/participants can't verify.
-// Entries that were never scored (totalScore null/undefined) are excluded — they
+// Entries that were never scored (totalScore null/undefined) are excluded - they
 // didn't compete for a rank.
 export function computeRanks(entries: RankableEntry[]): RankedResult[] {
     const scored = entries.filter((e): e is RankableEntry & { totalScore: number } => e.totalScore != null);
@@ -41,7 +41,7 @@ export function computeRanks(entries: RankableEntry[]): RankedResult[] {
 }
 
 // Points awarded for a given rank, per the fest's configured scheme (default
-// {1: 10, 2: 7, 3: 5}). Ranks with no configured points score 0, not an error —
+// {1: 10, 2: 7, 3: 5}). Ranks with no configured points score 0, not an error -
 // most entries in a program don't place.
 export function pointsForRank(rank: number, pointsScheme: Record<string, number>): number {
     return pointsScheme[String(rank)] ?? 0;
@@ -55,7 +55,7 @@ export interface TeamPointsInput {
 
 // Aggregates ranked results into per-team point totals. Team-type programs award
 // points directly to the entry's team; solo-type programs award to the participant's
-// own team (if they have one — solo entries with no team still rank individually,
+// own team (if they have one - solo entries with no team still rank individually,
 // they just don't contribute to team standings).
 export function computeTeamPoints(
     results: TeamPointsInput[],

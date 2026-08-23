@@ -148,7 +148,7 @@ export default function CertificatesPage({ params }: { params: Promise<{ festId:
             }
         } catch (err) {
             console.error(err);
-            setMessage('Failed to generate certificates — check the template image URL.');
+            setMessage('Failed to generate certificates - check the template image URL.');
         } finally {
             setGenerating(false);
             setGenProgress({ current: 0, total: 0 });
@@ -170,7 +170,7 @@ export default function CertificatesPage({ params }: { params: Promise<{ festId:
                 },
                 ...top.map((entry, idx): Overlay => ({
                     type: 'text',
-                    text: `${ordinal(entry.rank)} — ${entry.name}`,
+                    text: `${ordinal(entry.rank)} - ${entry.name}`,
                     x: template.width / 2,
                     y: template.height * (0.48 + idx * 0.08),
                     font: `${Math.floor(template.width * 0.028)}px Arial`,
@@ -189,7 +189,7 @@ export default function CertificatesPage({ params }: { params: Promise<{ festId:
             downloadCanvasAsPng(canvas, `${selectedProgram.name.replace(/\s+/g, '_')}_Results_Poster.png`);
         } catch (err) {
             console.error(err);
-            setMessage('Failed to generate poster — check the template image URL.');
+            setMessage('Failed to generate poster - check the template image URL.');
         } finally {
             setPosterGenerating(false);
         }
@@ -215,7 +215,7 @@ export default function CertificatesPage({ params }: { params: Promise<{ festId:
             <div className="bg-card border border-border rounded-xl p-6 space-y-4">
                 <h2 className="text-lg font-bold text-white">Templates</h2>
                 <p className="text-xs text-muted-foreground">
-                    Upload a certificate template (per participant) and a results poster template (per program, top 3). Text is composited onto fixed positions — center-focused layouts work best.
+                    Upload a certificate template (per participant) and a results poster template (per program, top 3). Text is composited onto fixed positions - center-focused layouts work best.
                 </p>
 
                 {[

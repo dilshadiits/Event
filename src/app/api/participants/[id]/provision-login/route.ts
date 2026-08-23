@@ -26,10 +26,10 @@ export const POST = withErrorHandler(async (req: Request, context: { params: Pro
         return successResponse({ alreadyProvisioned: true, userId: participant.userId.toString() });
     }
     if (!participant.phone) {
-        return errorResponse('This participant has no phone number on file — add one before enabling login', 400);
+        return errorResponse('This participant has no phone number on file - add one before enabling login', 400);
     }
 
-    // Scope the lookup by organization too — the same phone number can legitimately
+    // Scope the lookup by organization too - the same phone number can legitimately
     // be a student in more than one organization, just not twice within the same one.
     const fest = await Fest.findById(participant.festId).select('organizationId').lean();
     if (!fest) return errorResponse('Fest not found', 404);

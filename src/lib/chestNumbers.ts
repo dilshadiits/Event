@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { ProgramEntry } from '@/models';
 
-// Cryptographically-random Fisher-Yates shuffle (crypto.randomInt, not Math.random —
+// Cryptographically-random Fisher-Yates shuffle (crypto.randomInt, not Math.random -
 // chest numbers gate blind judging, so the assignment must not be predictable).
 function shuffle<T>(items: T[]): T[] {
     const arr = [...items];

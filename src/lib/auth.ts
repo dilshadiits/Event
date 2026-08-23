@@ -83,7 +83,7 @@ export const authOptions: AuthOptions = {
     callbacks: {
         async jwt({ token, account, profile, user, trigger }) {
             if (account && profile) {
-                // Google OAuth voter identity (existing /awards/[id]/vote flow) — unchanged
+                // Google OAuth voter identity (existing /awards/[id]/vote flow) - unchanged
                 token.email = profile.email;
             }
             if (user) {
@@ -94,7 +94,7 @@ export const authOptions: AuthOptions = {
                 if (u.participantId) token.participantId = u.participantId;
                 if (u.id) token.userId = u.id;
             }
-            // Explicit client-side session.update() call — used right after the
+            // Explicit client-side session.update() call - used right after the
             // onboarding step sets a Super Admin's organizationId for the first time,
             // so the session reflects it without a full re-login.
             if (trigger === 'update' && token.userId) {

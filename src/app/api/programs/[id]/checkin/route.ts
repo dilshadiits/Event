@@ -4,13 +4,13 @@ import { errorResponse, successResponse, withErrorHandler, requireOrgFestAccess 
 import { isValidObjectId } from '@/lib/validate';
 
 // POST /api/programs/[id]/checkin - QR check-in for a program entry.
-// Deliberately a new route rather than an extension of /api/scan — that route already
+// Deliberately a new route rather than an extension of /api/scan - that route already
 // branches on 3 QR formats for guest check-in, and adding a 4th competition format
 // risks regressing the working attendee/guest flow during a live event.
 //
 // The QR payload is just the ProgramEntry's own _id (same value used to render the
 // blind chest card in QRCodeModal). Unlike the judge worklist, this response reveals
-// the participant/team name — check-in staff aren't judges, and confirming the right
+// the participant/team name - check-in staff aren't judges, and confirming the right
 // person is standing at the door is the whole point of the scan.
 export const POST = withErrorHandler(async (req: Request, context: { params: Promise<{ id: string }> }) => {
     const { id } = await context.params;

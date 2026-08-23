@@ -5,7 +5,7 @@ import { errorResponse, successResponse, withErrorHandler } from '@/lib/api-util
 import { signupSchema } from '@/lib/validate';
 
 // POST /api/auth/signup - self-service account creation. Creates a Super Admin with
-// no organization yet — /onboarding/organization is where they name their org and
+// no organization yet - /onboarding/organization is where they name their org and
 // this account gets tied to it. This is the *only* way a Super Admin account comes
 // into existence; there is no admin-side "create a super admin" action.
 export const POST = withErrorHandler(async (req: Request) => {

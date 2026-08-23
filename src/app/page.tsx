@@ -5,8 +5,8 @@ import {
     Building2, ListChecks, Gavel, PartyPopper, QrCode, Vote, ShieldCheck, Lock,
 } from 'lucide-react';
 
-// Wordmark-only logo — no icon. Black Ops One has no true italic in Google Fonts,
-// so the slant is a browser-synthesized (faux) italic — applied as an inline
+// Wordmark-only logo - no icon. Black Ops One has no true italic in Google Fonts,
+// so the slant is a browser-synthesized (faux) italic - applied as an inline
 // style on the element below, since next/font's own generated class already sets
 // font-style: normal at the same specificity as a Tailwind `italic` class would.
 const logoFont = Black_Ops_One({ weight: '400', subsets: ['latin'], display: 'swap' });
@@ -22,7 +22,7 @@ const judgingFeatures = [
         icon: EyeOff,
         color: 'orange',
         title: 'Blind Judging',
-        body: 'Chest numbers are freshly shuffled for every program. Judges never see a name — only a number and a score sheet.',
+        body: 'Chest numbers are freshly shuffled for every program. Judges never see a name - only a number and a score sheet.',
     },
     {
         icon: Activity,
@@ -34,7 +34,7 @@ const judgingFeatures = [
         icon: Globe2,
         color: 'blue',
         title: 'Instant Public Results',
-        body: 'Flip one switch and your leaderboard and program results go live — no login required for anyone to see them.',
+        body: 'Flip one switch and your leaderboard and program results go live - no login required for anyone to see them.',
     },
     {
         icon: Award,
@@ -46,7 +46,7 @@ const judgingFeatures = [
         icon: GraduationCap,
         color: 'cyan',
         title: 'Student Portal',
-        body: 'Participants sign in with just a phone number to see their own schedule, chest number, and results — nothing to remember, nothing to install.',
+        body: 'Participants sign in with just a phone number to see their own schedule, chest number, and results - nothing to remember, nothing to install.',
     },
 ];
 
@@ -85,7 +85,7 @@ export default function MarketingLandingPage() {
                     className={`${logoFont.className} text-white text-4xl tracking-wide`}
                     style={{ fontStyle: 'italic' }} // next/font bakes font-style: normal into its own
                     // class at equal specificity to Tailwind's `italic`, so the class alone loses the
-                    // cascade — an inline style is the reliable way to force the slant.
+                    // cascade - an inline style is the reliable way to force the slant.
                 >
                     Podium
                 </span>
@@ -118,7 +118,7 @@ export default function MarketingLandingPage() {
                 </h1>
                 <p className="text-base sm:text-lg text-muted-foreground mt-6 max-w-2xl mx-auto text-balance">
                     Teams, blind chest-number judging, live championship standings, and auto-generated
-                    certificates — set up and run entirely by your own organization.
+                    certificates - set up and run entirely by your own organization.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-9">
                     <Link
@@ -144,7 +144,7 @@ export default function MarketingLandingPage() {
                             <ListChecks className="w-5 h-5" />
                         </div>
                         <h3 className="font-bold text-white">Competitions & Judging</h3>
-                        <p className="text-sm text-muted-foreground mt-1">The flagship tool — teams, blind judging, live results.</p>
+                        <p className="text-sm text-muted-foreground mt-1">The flagship tool - teams, blind judging, live results.</p>
                     </div>
                     <div className="bg-card border border-border rounded-2xl p-5">
                         <div className="w-10 h-10 bg-blue-500/15 text-blue-400 rounded-xl flex items-center justify-center mb-4">
@@ -212,7 +212,7 @@ export default function MarketingLandingPage() {
                     <div>
                         <h3 className="text-xl font-bold text-white">Your organization, your data</h3>
                         <p className="text-muted-foreground mt-1.5 leading-relaxed">
-                            Every organization on Event is completely walled off from every other one — teams, judges,
+                            Every organization on Event is completely walled off from every other one - teams, judges,
                             scores, and results in your organization are never visible to anyone outside it. A Product
                             Admin can help across organizations when you need support, but no other organization ever can.
                         </p>

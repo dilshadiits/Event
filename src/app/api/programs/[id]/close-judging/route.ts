@@ -4,7 +4,7 @@ import { errorResponse, successResponse, withErrorHandler, requireOrgFestAccess 
 import { isValidObjectId } from '@/lib/validate';
 
 // POST /api/programs/[id]/close-judging - admin action that locks further score writes.
-// Rank computation itself happens at publish-results time (a later phase), not here —
+// Rank computation itself happens at publish-results time (a later phase), not here -
 // closing judging just freezes the scoring window.
 export const POST = withErrorHandler(async (req: Request, context: { params: Promise<{ id: string }> }) => {
     const { id } = await context.params;

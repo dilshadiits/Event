@@ -1,4 +1,4 @@
-// One-off demo data seeder — drives the real API (not direct DB writes) so every
+// One-off demo data seeder - drives the real API (not direct DB writes) so every
 // record goes through actual validation, chest-shuffling, and scoring logic.
 // Run with: node seed_demo_data.js   (dev server must be running on :4000)
 

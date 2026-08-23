@@ -5,7 +5,7 @@ import { isValidObjectId } from '@/lib/validate';
 
 // GET /api/programs/[id]/results-export - admin-only structured results data for
 // certificate/poster generation. Unlike the public /results route, this does NOT
-// require Fest.resultsArePublic — admins should be able to prepare certificates
+// require Fest.resultsArePublic - admins should be able to prepare certificates
 // before flipping results public. Still requires the program itself to be published
 // (ranks only exist after that).
 export const GET = withErrorHandler(async (req: Request, context: { params: Promise<{ id: string }> }) => {

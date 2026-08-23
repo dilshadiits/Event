@@ -8,7 +8,7 @@ import { createUserSchema, isValidObjectId } from '@/lib/validate';
 // Product Admin sees everyone across every organization (optionally narrowed to one
 // via organizationId). Super Admin sees only their own organization's accounts.
 // Event Admin only sees judges scoped to their own fests (needed to populate
-// judge-panel pickers) — never other admins' accounts.
+// judge-panel pickers) - never other admins' accounts.
 export const GET = withErrorHandler(async (req: Request) => {
     const caller = await requireRole(['product-admin', 'super-admin', 'event-admin']);
     if (!caller) return errorResponse('Unauthorized', 403);
@@ -54,11 +54,11 @@ export const GET = withErrorHandler(async (req: Request) => {
 });
 
 // POST /api/users - create an Event Admin, Judge, or (rarely) another Product Admin.
-// Super Admin accounts are never created here — they're created exclusively through
+// Super Admin accounts are never created here - they're created exclusively through
 // /signup + the organization-onboarding flow, since each one owns a brand new
 // organization. Exception: if no Product Admin exists yet at all, a request carrying
 // the correct BOOTSTRAP_SECRET may create the very first one (one-time platform
-// setup — there is no login yet at that point).
+// setup - there is no login yet at that point).
 export const POST = withErrorHandler(async (req: Request) => {
     const body = await req.json();
     const validated = createUserSchema.parse(body);

@@ -5,7 +5,7 @@ import { updateProgramCriteriaSchema, isValidObjectId } from '@/lib/validate';
 
 // PUT /api/programs/[id]/criteria - replace the criteria list.
 // Blocked once any judge has submitted a score, since Score.criteriaScores keys
-// are criterion ids — changing the list would silently orphan existing scores.
+// are criterion ids - changing the list would silently orphan existing scores.
 export const PUT = withErrorHandler(async (req: Request, context: { params: Promise<{ id: string }> }) => {
     const { id } = await context.params;
     if (!isValidObjectId(id)) return errorResponse('Invalid program ID', 400);

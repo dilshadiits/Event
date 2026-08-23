@@ -8,7 +8,7 @@ import { computeRanks, computeTeamPoints } from '@/lib/scoring';
 //
 // Public mode (default, no session required): only counts programs with
 // resultsPublished=true, using their persisted ranks, and only if the fest's
-// resultsArePublic flag is on — mirrors the existing admin=true param pattern in
+// resultsArePublic flag is on - mirrors the existing admin=true param pattern in
 // /api/award-votes for the public/admin split.
 //
 // Admin mode (?admin=true, requires fest access): additionally computes a live,

@@ -15,7 +15,7 @@ const PUBLIC_ROUTES = [
     '/vote/',   // Matches /vote/[eventId]
     '/results/', // Public competition results (unauthenticated)
     // These are protected by src/proxy.ts + NextAuth roles instead of the shared
-    // admin password — PasswordGate steps aside so it doesn't double-gate them.
+    // admin password - PasswordGate steps aside so it doesn't double-gate them.
     '/admin/competitions',
     '/judge',
     '/student',
@@ -28,7 +28,7 @@ const PUBLIC_ROUTES = [
 
 // Check if current path is a public route
 const isPublicRoute = (pathname: string): boolean => {
-    // The landing page — an exact match, not a prefix, since every path starts with "/"
+    // The landing page - an exact match, not a prefix, since every path starts with "/"
     if (pathname === '/') return true;
     // Check for voting page specifically - check various patterns
     if (pathname.includes('/vote')) return true;

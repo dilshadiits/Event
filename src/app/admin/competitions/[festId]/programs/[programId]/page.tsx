@@ -405,7 +405,7 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
                             <div key={entry.id} className="py-3 flex items-center justify-between gap-3">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-sm shrink-0">
-                                        {entry.chestNumber || '—'}
+                                        {entry.chestNumber || '-'}
                                     </div>
                                     <div>
                                         <div className="font-medium text-white flex items-center gap-2">

@@ -26,7 +26,7 @@ export default function GetStartedPage() {
                     How would you like to continue?
                 </h1>
                 <p className="text-base text-muted-foreground mt-3 max-w-xl mx-auto text-balance">
-                    Every organization&apos;s data is fully separate — pick the option that matches you.
+                    Every organization&apos;s data is fully separate - pick the option that matches you.
                 </p>
             </section>
 
@@ -55,7 +55,7 @@ export default function GetStartedPage() {
                             <KeyRound className="w-5 h-5" />
                         </div>
                         <h3 className="font-bold text-white mb-1">Have an organization</h3>
-                        <p className="text-sm text-muted-foreground">Super Admin or Event Admin — sign in to manage your fests.</p>
+                        <p className="text-sm text-muted-foreground">Super Admin or Event Admin - sign in to manage your fests.</p>
                         <span className="inline-flex items-center gap-1 text-sm text-purple-400 mt-3 group-hover:gap-2 transition-all">
                             Sign in <ArrowRight className="w-3.5 h-3.5" />
                         </span>
@@ -91,7 +91,7 @@ export default function GetStartedPage() {
                 </div>
             </section>
 
-            {/* Footer — classic tools, kept discoverable but low-emphasis */}
+            {/* Footer - classic tools, kept discoverable but low-emphasis */}
             <footer className="max-w-6xl mx-auto px-4 md:px-8 pb-10">
                 <div className="border-t border-border pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
                     <span>&copy; {new Date().getFullYear()} Podium</span>

@@ -59,10 +59,10 @@ export const POST = withErrorHandler(async (req: Request, context: { params: Pro
     const validated = addProgramEntriesSchema.parse(body);
 
     if (program.type === 'solo' && validated.teamIds?.length) {
-        return errorResponse('This is a solo program — enroll participants, not teams', 400);
+        return errorResponse('This is a solo program - enroll participants, not teams', 400);
     }
     if (program.type === 'team' && validated.participantIds?.length) {
-        return errorResponse('This is a team program — enroll teams, not participants', 400);
+        return errorResponse('This is a team program - enroll teams, not participants', 400);
     }
 
     const docs: Array<{ programId: string; participantId?: string; teamId?: string }> = [];
