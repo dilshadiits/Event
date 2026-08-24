@@ -11,7 +11,7 @@ function loginPathFor(pathname: string): string {
 function roleAllowed(pathname: string, role: string | undefined): boolean {
     if (pathname.startsWith('/product-admin')) return role === 'product-admin';
     if (pathname.startsWith('/admin/competitions')) return role === 'product-admin' || role === 'super-admin' || role === 'event-admin';
-    if (pathname.startsWith('/judge')) return role === 'judge' || role === 'super-admin';
+    if (pathname.startsWith('/judge')) return role === 'judge' || role === 'super-admin' || role === 'product-admin';
     if (pathname.startsWith('/student')) return role === 'student';
     return true;
 }

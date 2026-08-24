@@ -1,5 +1,5 @@
 import dbConnect from '@/lib/mongodb';
-import { Program, ProgramEntry, Score } from '@/models';
+import { Fest, Program, ProgramEntry, Score } from '@/models';
 import { errorResponse, successResponse, withErrorHandler, requireRole } from '@/lib/api-utils';
 import { submitScoreSchema, isValidObjectId } from '@/lib/validate';
 
@@ -12,15 +12,20 @@ export const POST = withErrorHandler(async (req: Request, context: { params: Pro
     const { id } = await context.params;
     if (!isValidObjectId(id)) return errorResponse('Invalid program ID', 400);
 
-    const caller = await requireRole(['judge']);
+    const caller = await requireRole(['judge', 'super-admin', 'product-admin']);
     if (!caller) return errorResponse('Unauthorized', 403);
 
     await dbConnect();
     const program = await Program.findById(id);
     if (!program) return errorResponse('Program not found', 404);
 
-    const isPanelMember = (program.judgePanel || []).some((j: unknown) => String(j) === caller.id);
-    if (!isPanelMember) return errorResponse('You are not on the judge panel for this program', 403);
+    if (caller.role === 'judge') {
+        const isPanelMember = (program.judgePanel || []).some((j: unknown) => String(j) === caller.id);
+        if (!isPanelMember) return errorResponse('You are not on the judge panel for this program', 403);
+    } else if (caller.role === 'super-admin') {
+        const fest = await Fest.findById(program.festId).select('organizationId').lean();
+        if (!fest || String(fest.organizationId) !== caller.organizationId) return errorResponse('Program not found', 404);
+    }
 
     if (program.status === 'judging-closed' || program.status === 'results-published') {
         return errorResponse('Judging is closed for this program', 400);
