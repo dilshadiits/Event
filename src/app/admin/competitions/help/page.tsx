@@ -43,7 +43,7 @@ const SECTIONS: Section[] = [
         accent: 'bg-yellow-500/20 text-yellow-400',
         content: (
             <div className="space-y-2 text-sm text-muted-foreground">
-                <p>From <strong className="text-white">Competitions → New Fest</strong> (super-admin/product-admin), set the name, dates, and a <strong className="text-white">points scheme</strong> — how many fest points rank 1/2/3 are worth (default 10/7/5). A <strong className="text-white">team points multiplier</strong> can boost team-type programs relative to solo ones.</p>
+                <p>From <strong className="text-white">Competitions → New Fest</strong> (super-admin), set the name, dates, and a <strong className="text-white">points scheme</strong> — how many fest points rank 1/2/3 are worth (default 10/7/5). A <strong className="text-white">team points multiplier</strong> can boost team-type programs relative to solo ones.</p>
                 <p>Add <strong className="text-white">Teams</strong> next (Fest dashboard → Teams) — name, code, and a color. That color is used everywhere teams show up: standings bars, student badges, the public results page.</p>
             </div>
         ),
@@ -81,7 +81,7 @@ const SECTIONS: Section[] = [
         accent: 'bg-orange-500/20 text-orange-400',
         content: (
             <div className="space-y-2 text-sm text-muted-foreground">
-                <p>Create judge accounts from <strong className="text-white">Judges &amp; Admins</strong> (event-admins can only create judges; super-admin/product-admin can create judges and event-admins too). Judges sign in at <code className="text-white">/login</code> with email + password.</p>
+                <p>Create judge accounts from <strong className="text-white">Judges &amp; Admins</strong> (event-admins can only create judges; super-admin can create judges and event-admins too). Judges sign in at <code className="text-white">/login</code> with email + password.</p>
                 <p>On each program&apos;s detail page, pick which judges sit on that program&apos;s <strong className="text-white">Judge Panel</strong> — a judge only sees programs they&apos;re assigned to.</p>
             </div>
         ),
@@ -106,8 +106,8 @@ const SECTIONS: Section[] = [
         accent: 'bg-green-500/20 text-green-400',
         content: (
             <div className="space-y-2 text-sm text-muted-foreground">
-                <p><strong className="text-white">Super-admin and product-admin can score any program themselves</strong>, even if it has zero judges assigned — use the <strong className="text-white">&quot;Score as Admin&quot;</strong> button on the program detail page, which opens the same scoring screen a judge uses.</p>
-                <p>Any admin (event-admin included) can also <strong className="text-white">review and correct</strong> what a specific judge entered: on the program page, click the clipboard icon next to an entry to expand every judge&apos;s individual marks per criterion, and edit any of them inline. Event-admins can only correct an <em>existing</em> judge&apos;s score this way, not add a brand-new one of their own — that stays super-admin/product-admin only.</p>
+                <p><strong className="text-white">Super-admin can score any program directly</strong>, even if it has zero judges assigned — use the <strong className="text-white">&quot;Score as Admin&quot;</strong> button on the program detail page, which opens the same scoring screen a judge uses.</p>
+                <p>Any admin (event-admin included) can also <strong className="text-white">review and correct</strong> what a specific judge entered: on the program page, click the clipboard icon next to an entry to expand every judge&apos;s individual marks per criterion, and edit any of them inline. Event-admins can only correct an <em>existing</em> judge&apos;s score this way, not add a brand-new one of their own — that stays super-admin only.</p>
             </div>
         ),
     },
@@ -162,10 +162,6 @@ const SECTIONS: Section[] = [
                         </tr>
                     </thead>
                     <tbody className="text-muted-foreground">
-                        <tr className="border-b border-border/50">
-                            <td className="py-2 pr-3 text-white font-medium whitespace-nowrap">Product Admin</td>
-                            <td className="py-2">Everything, across every organization. Only role that can create fests and other product-admins.</td>
-                        </tr>
                         <tr className="border-b border-border/50">
                             <td className="py-2 pr-3 text-white font-medium whitespace-nowrap">Super Admin</td>
                             <td className="py-2">Everything within their own organization — every fest, all management pages, and can score any program directly.</td>
