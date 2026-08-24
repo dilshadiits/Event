@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, use, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Plus, Trash2, Loader2, Upload, UserSquare2, KeyRound, Check } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Loader2, Upload, UserSquare2, KeyRound, Check, RotateCcw } from 'lucide-react';
 
 interface Team {
     id: string;
@@ -16,6 +16,7 @@ interface Participant {
     teamId?: string;
     teamName?: string;
     hasLogin?: boolean;
+    username?: string;
 }
 
 export default function ParticipantsPage({ params }: { params: Promise<{ festId: string }> }) {
@@ -31,6 +32,8 @@ export default function ParticipantsPage({ params }: { params: Promise<{ festId:
     const [importing, setImporting] = useState(false);
     const [importResult, setImportResult] = useState('');
     const [provisioningId, setProvisioningId] = useState<string | null>(null);
+    const [resettingId, setResettingId] = useState<string | null>(null);
+    const [credentialMessage, setCredentialMessage] = useState('');
 
     const fetchData = useCallback(async () => {
         try {
@@ -82,13 +85,32 @@ export default function ParticipantsPage({ params }: { params: Promise<{ festId:
 
     const provisionLogin = async (id: string) => {
         setProvisioningId(id);
+        setCredentialMessage('');
         const res = await fetch(`/api/participants/${id}/provision-login`, { method: 'POST' });
-        if (res.ok) fetchData();
-        else {
-            const data = await res.json();
+        const data = await res.json();
+        if (res.ok) {
+            if (data.username) {
+                setCredentialMessage(`Username: ${data.username} · Password: their phone number`);
+            }
+            fetchData();
+        } else {
             alert(data.error || 'Failed to enable login');
         }
         setProvisioningId(null);
+    };
+
+    const resetPassword = async (id: string) => {
+        if (!confirm('Reset this student\'s password back to their phone number?')) return;
+        setResettingId(id);
+        setCredentialMessage('');
+        const res = await fetch(`/api/participants/${id}/reset-password`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            setCredentialMessage('Password reset to their phone number.');
+        } else {
+            alert(data.error || 'Failed to reset password');
+        }
+        setResettingId(null);
     };
 
     const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -175,6 +197,7 @@ export default function ParticipantsPage({ params }: { params: Promise<{ festId:
             </div>
             {error && <p className="text-red-400 text-sm">{error}</p>}
             {importResult && <p className="text-sm text-purple-400">{importResult}</p>}
+            {credentialMessage && <p className="text-sm text-blue-400">{credentialMessage}</p>}
 
             <div className="bg-card border border-border rounded-2xl overflow-hidden">
                 {loading ? (
@@ -201,9 +224,20 @@ export default function ParticipantsPage({ params }: { params: Promise<{ festId:
                                 </div>
                                 <div className="flex items-center gap-1">
                                     {p.hasLogin ? (
-                                        <span className="flex items-center gap-1 text-xs text-green-400 px-2 py-1">
-                                            <Check className="w-3 h-3" /> Login enabled
-                                        </span>
+                                        <>
+                                            <span className="flex items-center gap-1 text-xs text-green-400 px-2 py-1">
+                                                <Check className="w-3 h-3" /> {p.username ? `@${p.username}` : 'Login enabled'}
+                                            </span>
+                                            <button
+                                                onClick={() => resetPassword(p.id)}
+                                                disabled={resettingId === p.id}
+                                                title="Reset password to their phone number"
+                                                className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-white bg-muted/50 hover:bg-muted disabled:opacity-40 px-3 py-1.5 rounded-lg border border-border transition-all"
+                                            >
+                                                {resettingId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                                                Reset Password
+                                            </button>
+                                        </>
                                     ) : (
                                         <button
                                             onClick={() => provisionLogin(p.id)}

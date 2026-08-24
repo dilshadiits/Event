@@ -154,7 +154,8 @@ const UserSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, index: true, sparse: true },
     phone: { type: String, index: true, sparse: true },
-    passwordHash: { type: String }, // for product-admin / super-admin / event-admin / judge credentials login
+    username: { type: String, index: true, sparse: true }, // student login handle - first name, deduped with a numeric suffix
+    passwordHash: { type: String }, // for product-admin / super-admin / event-admin / judge / student credentials login
     role: { type: String, enum: ['product-admin', 'super-admin', 'event-admin', 'judge', 'student'], required: true },
     organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', index: true }, // unset only for product-admin
     festIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Fest' }], // scopes event-admin / judge access within their org

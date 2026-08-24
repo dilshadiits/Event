@@ -3,7 +3,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { signIn, getSession, useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { KeyRound, Smartphone, Loader2, ArrowLeft } from 'lucide-react';
+import { KeyRound, GraduationCap, Loader2 } from 'lucide-react';
 
 type Mode = 'admin' | 'student';
 
@@ -69,102 +69,56 @@ function AdminForm() {
 
 function StudentForm() {
     const router = useRouter();
-    const [step, setStep] = useState<'phone' | 'otp'>('phone');
-    const [phone, setPhone] = useState('');
-    const [otp, setOtp] = useState('');
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const sendOtp = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
-        try {
-            const res = await fetch('/api/otp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone }),
-            });
-            const data = await res.json();
-            if (res.ok && data.success) {
-                setStep('otp');
-            } else {
-                setError(data.error || 'Failed to send code');
-            }
-        } catch {
-            setError('Something went wrong. Please try again.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const verifyOtp = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError('');
 
-        const res = await signIn('student-otp', { phone, otp, redirect: false });
+        const res = await signIn('student-credentials', { username, password, redirect: false });
         if (res?.ok) {
             router.push('/student');
         } else {
-            setError('Invalid or expired code. Please try again.');
+            setError('Invalid username or password');
         }
         setLoading(false);
     };
 
-    if (step === 'phone') {
-        return (
-            <form onSubmit={sendOtp} className="space-y-4">
-                <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="Phone number"
-                    required
-                    autoFocus
-                    className="w-full bg-muted border border-border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all"
-                />
-                {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-                <button
-                    type="submit"
-                    disabled={!phone || loading}
-                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:opacity-50 text-white py-3 rounded-lg font-bold transition-all"
-                >
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send Code'}
-                </button>
-            </form>
-        );
-    }
-
     return (
-        <form onSubmit={verifyOtp} className="space-y-4">
-            <p className="text-sm text-muted-foreground text-center">Enter the code sent to {phone}</p>
+        <form onSubmit={handleSubmit} className="space-y-4">
             <input
                 type="text"
-                inputMode="numeric"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                placeholder="6-digit code"
-                maxLength={6}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Username"
                 required
                 autoFocus
-                className="w-full bg-muted border border-border rounded-lg px-4 py-3 text-white text-center text-2xl tracking-widest focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all"
+                autoCapitalize="none"
+                className="w-full bg-muted border border-border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all"
+            />
+            <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                required
+                className="w-full bg-muted border border-border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all"
             />
             {error && <p className="text-red-400 text-sm text-center">{error}</p>}
             <button
                 type="submit"
-                disabled={otp.length !== 6 || loading}
+                disabled={!username || !password || loading}
                 className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:opacity-50 text-white py-3 rounded-lg font-bold transition-all"
             >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify & Sign In'}
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Sign In'}
             </button>
-            <button
-                type="button"
-                onClick={() => { setStep('phone'); setOtp(''); setError(''); }}
-                className="w-full flex items-center justify-center gap-2 text-muted-foreground hover:text-white text-sm transition-colors"
-            >
-                <ArrowLeft className="w-4 h-4" /> Use a different number
-            </button>
+            <p className="text-xs text-muted-foreground text-center">
+                Your username and password were shared by your event admin. Default password is your phone number.
+            </p>
         </form>
     );
 }
@@ -205,7 +159,7 @@ function LoginGateway() {
                         className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${mode === 'student' ? 'bg-cyan-600 text-white' : 'text-muted-foreground hover:text-white'
                             }`}
                     >
-                        <Smartphone className="w-4 h-4" /> Student
+                        <GraduationCap className="w-4 h-4" /> Student
                     </button>
                 </div>
 

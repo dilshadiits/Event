@@ -56,7 +56,8 @@ const SECTIONS: Section[] = [
         content: (
             <div className="space-y-2 text-sm text-muted-foreground">
                 <p>Add participants one at a time, or bulk-import an Excel sheet (columns: <code className="text-white">Name</code> required, <code className="text-white">Team</code>/<code className="text-white">Email</code>/<code className="text-white">Phone</code> optional).</p>
-                <p><strong className="text-white">A phone number alone doesn&apos;t give a student a login.</strong> On the Participants page, use <strong className="text-white">Provision Login</strong> on a participant with a phone number to create their student account — after that they can sign in with phone + OTP at <code className="text-white">/login</code>.</p>
+                <p><strong className="text-white">A phone number alone doesn&apos;t give a student a login.</strong> On the Participants page, use <strong className="text-white">Enable Login</strong> on a participant with a phone number to create their student account. This generates a <strong className="text-white">username</strong> from their first name (e.g. &quot;Adithyan Dileep&quot; → <code className="text-white">Adithyan</code>, with a number appended if that username is already taken), and sets their <strong className="text-white">phone number as the default password</strong>. Both appear on screen once — share them with the student.</p>
+                <p>If a student forgets their password, use <strong className="text-white">Reset Password</strong> next to their name to set it back to their phone number. Students can change it themselves afterwards from their own Settings page.</p>
             </div>
         ),
     },
@@ -141,7 +142,8 @@ const SECTIONS: Section[] = [
         accent: 'bg-teal-500/20 text-teal-400',
         content: (
             <div className="space-y-2 text-sm text-muted-foreground">
-                <p>Once a participant has a provisioned login, they sign in at <code className="text-white">/login</code> (student tab) with phone + OTP. Their home page shows every program they&apos;re entered in as a poster card — live status, chest number, venue/time, and check-in state — and a separate Results tab once ranks are published.</p>
+                <p>Once a participant has a provisioned login, they sign in at <code className="text-white">/login</code> (student tab) with their <strong className="text-white">username and password</strong> (default password is their phone number). Their home page shows every program they&apos;re entered in as a poster card — live status, chest number, venue/time, and check-in state — and a separate Results tab once ranks are published.</p>
+                <p>From the <strong className="text-white">Settings</strong> icon on their home page, a student can change their own password at any time.</p>
             </div>
         ),
     },

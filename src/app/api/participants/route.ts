@@ -1,5 +1,5 @@
 import dbConnect from '@/lib/mongodb';
-import { Participant, Team } from '@/models';
+import { Participant, Team, User } from '@/models';
 import { errorResponse, successResponse, withErrorHandler, requireOrgFestAccess } from '@/lib/api-utils';
 import { createParticipantSchema, sanitizeString, isValidObjectId } from '@/lib/validate';
 
@@ -18,6 +18,10 @@ export const GET = withErrorHandler(async (req: Request) => {
     const teams = await Team.find({ _id: { $in: teamIds } }).lean();
     const teamMap = new Map(teams.map(t => [t._id.toString(), t.name]));
 
+    const userIds = participants.map(p => p.userId?.toString()).filter(Boolean);
+    const users = await User.find({ _id: { $in: userIds } }).select('username').lean();
+    const usernameMap = new Map(users.map(u => [u._id.toString(), u.username]));
+
     return successResponse(participants.map(p => ({
         id: p._id.toString(),
         name: p.name,
@@ -26,6 +30,7 @@ export const GET = withErrorHandler(async (req: Request) => {
         teamId: p.teamId?.toString(),
         teamName: p.teamId ? teamMap.get(p.teamId.toString()) : undefined,
         hasLogin: !!p.userId,
+        username: p.userId ? usernameMap.get(p.userId.toString()) : undefined,
     })));
 });
 

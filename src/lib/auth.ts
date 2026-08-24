@@ -3,11 +3,8 @@ import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/mongodb';
-import { User, OTP } from '@/models';
-
-function normalizePhone(phone: string): string {
-    return phone.replace(/\D/g, '').slice(-10);
-}
+import { User } from '@/models';
+import { escapeRegex } from '@/lib/studentAuth';
 
 export const authOptions: AuthOptions = {
     providers: [
@@ -47,32 +44,31 @@ export const authOptions: AuthOptions = {
             },
         }),
         CredentialsProvider({
-            id: 'student-otp',
+            id: 'student-credentials',
             name: 'Student Login',
             credentials: {
-                phone: { label: 'Phone', type: 'text' },
-                otp: { label: 'OTP', type: 'text' },
+                username: { label: 'Username', type: 'text' },
+                password: { label: 'Password', type: 'password' },
             },
             async authorize(credentials) {
-                if (!credentials?.phone || !credentials?.otp) return null;
-                const phone = normalizePhone(credentials.phone);
+                if (!credentials?.username || !credentials?.password) return null;
 
                 await dbConnect();
-                const otp = await OTP.findOne({
-                    phone,
-                    code: credentials.otp,
-                    expiresAt: { $gt: new Date() },
+                const user = await User.findOne({
+                    username: { $regex: `^${escapeRegex(credentials.username.trim())}$`, $options: 'i' },
+                    role: 'student',
+                    isActive: true,
                 });
-                if (!otp) return null;
+                if (!user || !user.passwordHash) return null;
 
-                const user = await User.findOne({ phone, role: 'student', isActive: true });
-                if (!user) return null;
+                const valid = await bcrypt.compare(credentials.password, user.passwordHash);
+                if (!valid) return null;
 
                 return {
                     id: user._id.toString(),
-                    phone: user.phone,
                     name: user.name,
                     role: user.role,
+                    organizationId: user.organizationId ? String(user.organizationId) : undefined,
                     participantId: user.participantId ? String(user.participantId) : undefined,
                 };
             },

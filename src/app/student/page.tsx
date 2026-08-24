@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { signOut } from 'next-auth/react';
 import Link from 'next/link';
-import { LogOut, Loader2, Trophy, ListChecks, CheckCircle2, Award } from 'lucide-react';
+import { LogOut, Loader2, Trophy, ListChecks, CheckCircle2, Award, Settings } from 'lucide-react';
 import StudentProgramCard, { StudentProgram } from '@/components/StudentProgramCard';
 
 interface Me {
@@ -74,6 +74,13 @@ export default function StudentHomePage() {
                                 title="My Results"
                             >
                                 <Trophy className="w-5 h-5" />
+                            </Link>
+                            <Link
+                                href="/student/settings"
+                                className="p-2.5 text-white/70 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-colors"
+                                title="Settings"
+                            >
+                                <Settings className="w-5 h-5" />
                             </Link>
                             <button
                                 onClick={() => signOut({ callbackUrl: '/login' })}
