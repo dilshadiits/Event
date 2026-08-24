@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
-import { Trophy, Plus, LogOut, Calendar, Loader2 } from 'lucide-react';
+import { Trophy, Plus, LogOut, Calendar, Loader2, BookOpen } from 'lucide-react';
 
 interface Fest {
     id: string;
@@ -46,6 +46,13 @@ export default function CompetitionsListPage() {
                             <Plus className="w-4 h-4" /> New Fest
                         </Link>
                     )}
+                    <Link
+                        href="/admin/competitions/help"
+                        className="p-2 text-muted-foreground hover:text-white hover:bg-muted rounded-lg transition-colors"
+                        title="Help & Tutorial"
+                    >
+                        <BookOpen className="w-5 h-5" />
+                    </Link>
                     <button
                         onClick={() => signOut({ callbackUrl: '/login' })}
                         className="flex items-center gap-2 text-muted-foreground hover:text-white p-2 rounded-lg hover:bg-muted transition-colors"
