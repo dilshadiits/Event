@@ -15,6 +15,7 @@ interface Program {
     status: string;
     criteriaCount: number;
     judgeCount: number;
+    posterUrl?: string;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -184,9 +185,14 @@ export default function ProgramsPage({ params }: { params: Promise<{ festId: str
                                 className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center">
-                                        <ListChecks className="w-4 h-4" />
-                                    </div>
+                                    {p.posterUrl ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={p.posterUrl} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                                    ) : (
+                                        <div className="w-9 h-9 rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center shrink-0">
+                                            <ListChecks className="w-4 h-4" />
+                                        </div>
+                                    )}
                                     <div>
                                         <div className="font-bold text-white">{p.name}</div>
                                         <div className="text-xs text-muted-foreground flex items-center gap-3 mt-0.5">

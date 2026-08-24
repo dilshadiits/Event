@@ -219,6 +219,7 @@ const ProgramSchema = new mongoose.Schema({
     category: { type: String },
     scheduledAt: { type: Date },
     venue: { type: String },
+    posterUrl: { type: String },
     status: {
         type: String,
         enum: ['scheduled', 'chest-numbers-shuffled', 'in-progress', 'judging-closed', 'results-published'],

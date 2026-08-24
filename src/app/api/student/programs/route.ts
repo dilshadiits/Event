@@ -33,6 +33,7 @@ export const GET = withErrorHandler(async () => {
                 mode: program.mode,
                 scheduledAt: program.scheduledAt,
                 venue: program.venue,
+                posterUrl: program.posterUrl,
                 status: program.status,
                 chestNumber: e.chestNumber,
                 checkedIn: e.checkedIn,

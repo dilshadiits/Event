@@ -24,6 +24,7 @@ export const GET = withErrorHandler(async (req: Request) => {
         category: p.category,
         scheduledAt: p.scheduledAt,
         venue: p.venue,
+        posterUrl: p.posterUrl,
         status: p.status,
         criteriaCount: p.criteria?.length || 0,
         judgeCount: p.judgePanel?.length || 0,

@@ -202,6 +202,7 @@ export const updateProgramSchema = z.object({
     category: z.string().max(100).optional(),
     scheduledAt: z.string().optional(),
     venue: z.string().max(150).optional(),
+    posterUrl: z.string().max(500).optional(),
     status: z.enum(['scheduled', 'chest-numbers-shuffled', 'in-progress', 'judging-closed', 'results-published']).optional(),
 });
 

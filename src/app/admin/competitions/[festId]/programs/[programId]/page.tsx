@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, use, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Check, Gavel, Shuffle, Plus, Trash2, QrCode, CheckCircle2, ExternalLink, ScanLine } from 'lucide-react';
+import { ArrowLeft, Loader2, Check, Gavel, Shuffle, Plus, Trash2, QrCode, CheckCircle2, ExternalLink, ScanLine, Upload, Image as ImageIcon } from 'lucide-react';
 import CriteriaBuilder, { Criterion } from '@/components/CriteriaBuilder';
 import QRCodeModal from '@/components/QRCodeModal';
 
@@ -19,6 +19,7 @@ interface ProgramDetail {
     status: string;
     criteria: Criterion[];
     judgePanel: Judge[];
+    posterUrl?: string;
 }
 
 interface Entry {
@@ -48,6 +49,9 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
     const [savingPanel, setSavingPanel] = useState(false);
     const [criteriaMessage, setCriteriaMessage] = useState('');
     const [panelMessage, setPanelMessage] = useState('');
+    const [posterUrl, setPosterUrl] = useState('');
+    const [uploadingPoster, setUploadingPoster] = useState(false);
+    const [posterMessage, setPosterMessage] = useState('');
 
     const [entries, setEntries] = useState<Entry[]>([]);
     const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -75,6 +79,7 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
                 setProgram(progData);
                 setCriteria(progData.criteria || []);
                 setSelectedJudgeIds((progData.judgePanel || []).map((j: Judge) => j.id));
+                setPosterUrl(progData.posterUrl || '');
 
                 const [entriesRes, candidatesRes, reportRes] = await Promise.all([
                     fetch(`/api/programs/${programId}/entries`),
@@ -216,6 +221,41 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
         setSavingPanel(false);
     };
 
+    const uploadPoster = async (file: File) => {
+        setUploadingPoster(true);
+        setPosterMessage('');
+        const formData = new FormData();
+        formData.append('file', file);
+        const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok || !uploadData.url) {
+            setPosterMessage(uploadData.error || 'Failed to upload poster');
+            setUploadingPoster(false);
+            return;
+        }
+        const saveRes = await fetch(`/api/programs/${programId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ posterUrl: uploadData.url }),
+        });
+        if (saveRes.ok) {
+            setPosterUrl(uploadData.url);
+        } else {
+            setPosterMessage('Uploaded, but failed to save to the program.');
+        }
+        setUploadingPoster(false);
+    };
+
+    const removePoster = async () => {
+        if (!confirm('Remove the poster for this program?')) return;
+        const res = await fetch(`/api/programs/${programId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ posterUrl: '' }),
+        });
+        if (res.ok) setPosterUrl('');
+    };
+
     if (loading || !program) {
         return (
             <main className="min-h-screen flex items-center justify-center text-muted-foreground gap-2">
@@ -269,6 +309,56 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
             </div>
             {closeJudgingMessage && <p className="text-sm text-red-400">{closeJudgingMessage}</p>}
             {publishMessage && <p className="text-sm text-green-400">{publishMessage}</p>}
+
+            <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5 text-cyan-400" /> Poster
+                </h2>
+                <div className="flex flex-col sm:flex-row gap-4 items-start">
+                    <div className="w-full sm:w-40 aspect-3/4 rounded-lg overflow-hidden bg-muted/30 border border-border shrink-0">
+                        {posterUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={posterUrl} alt="Program poster" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                                <ImageIcon className="w-8 h-8" />
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                        <p className="text-sm text-muted-foreground">
+                            Shown as the event&apos;s cover image on the student schedule and public results.
+                        </p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <label className="flex items-center gap-2 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-400 px-4 py-2 rounded-lg text-sm font-medium transition-all border border-cyan-500/30 cursor-pointer">
+                                {uploadingPoster ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                {posterUrl ? 'Change Poster' : 'Upload Poster'}
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    disabled={uploadingPoster}
+                                    onChange={e => {
+                                        const file = e.target.files?.[0];
+                                        if (file) uploadPoster(file);
+                                        e.target.value = '';
+                                    }}
+                                />
+                            </label>
+                            {posterUrl && (
+                                <button
+                                    onClick={removePoster}
+                                    className="flex items-center gap-2 text-muted-foreground hover:text-red-400 px-3 py-2 rounded-lg text-sm transition-colors"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Remove
+                                </button>
+                            )}
+                        </div>
+                        {posterMessage && <p className="text-sm text-red-400">{posterMessage}</p>}
+                    </div>
+                </div>
+            </div>
 
             <div className="bg-card border border-border rounded-xl p-6 space-y-4">
                 <h2 className="text-lg font-bold text-white">Judging Criteria</h2>

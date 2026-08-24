@@ -27,6 +27,7 @@ export const GET = withErrorHandler(async (req: Request, context: { params: Prom
         category: program.category,
         scheduledAt: program.scheduledAt,
         venue: program.venue,
+        posterUrl: program.posterUrl,
         status: program.status,
         criteria: program.criteria,
         judgePanel: judges.map(j => ({ id: j._id.toString(), name: j.name, email: j.email })),
@@ -54,6 +55,7 @@ export const PUT = withErrorHandler(async (req: Request, context: { params: Prom
     if (validated.category !== undefined) program.category = validated.category;
     if (validated.scheduledAt !== undefined) program.scheduledAt = validated.scheduledAt ? new Date(validated.scheduledAt) : undefined;
     if (validated.venue !== undefined) program.venue = validated.venue;
+    if (validated.posterUrl !== undefined) program.posterUrl = validated.posterUrl;
     if (validated.status !== undefined) program.status = validated.status;
 
     await program.save();
