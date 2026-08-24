@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, use, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, Check, Gavel, Shuffle, Plus, Trash2, QrCode, CheckCircle2, ExternalLink, ScanLine, Upload, Image as ImageIcon, ClipboardList, ChevronDown } from 'lucide-react';
 import CriteriaBuilder, { Criterion } from '@/components/CriteriaBuilder';
@@ -41,6 +42,8 @@ interface Candidate {
 
 export default function ProgramDetailPage({ params }: { params: Promise<{ festId: string; programId: string }> }) {
     const { festId, programId } = use(params);
+    const { data: session } = useSession();
+    const canScoreAsAdmin = session?.user?.role === 'super-admin' || session?.user?.role === 'product-admin';
     const [program, setProgram] = useState<ProgramDetail | null>(null);
     const [availableJudges, setAvailableJudges] = useState<Judge[]>([]);
     const [criteria, setCriteria] = useState<Criterion[]>([]);
@@ -278,6 +281,15 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
                         <p className="text-sm text-muted-foreground capitalize">{program.type} &middot; {program.mode} &middot; {program.status.replace(/-/g, ' ')}</p>
                     </div>
                 </div>
+                {canScoreAsAdmin && (program.status === 'chest-numbers-shuffled' || program.status === 'in-progress') && (
+                    <Link
+                        href={`/judge/programs/${programId}/score`}
+                        className="flex items-center gap-2 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-400 px-4 py-2 rounded-lg text-sm font-medium transition-all border border-cyan-500/30"
+                    >
+                        <Gavel className="w-4 h-4" />
+                        Score as Admin
+                    </Link>
+                )}
                 {(program.status === 'chest-numbers-shuffled' || program.status === 'in-progress') && (
                     <button
                         onClick={closeJudging}
