@@ -113,12 +113,14 @@ export default function ParticipantsPage({ params }: { params: Promise<{ festId:
                 <Link href={`/admin/competitions/${festId}`} className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
                     <ArrowLeft className="w-6 h-6 text-muted-foreground" />
                 </Link>
-                <h1 className="text-2xl font-bold text-white">Participants</h1>
+                <h1 className="text-2xl font-bold text-white">Participants {!loading && <span className="text-muted-foreground font-normal">({participants.length})</span>}</h1>
             </div>
 
             <div className="flex flex-wrap gap-3">
-                <form onSubmit={handleAdd} className="flex-1 min-w-[280px] bg-card border border-border rounded-xl p-4 flex flex-wrap gap-3 items-end">
-                    <div className="flex-1 min-w-[140px]">
+                <form onSubmit={handleAdd} className="flex-1 min-w-70 bg-card border border-border rounded-2xl p-4 space-y-3">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Add a participant</p>
+                    <div className="flex flex-wrap gap-3 items-end">
+                    <div className="flex-1 min-w-35">
                         <label className="text-xs font-medium text-muted-foreground mb-1 block">Name</label>
                         <input
                             type="text"
@@ -156,9 +158,10 @@ export default function ParticipantsPage({ params }: { params: Promise<{ festId:
                         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                         Add
                     </button>
+                    </div>
                 </form>
 
-                <div className="bg-card border border-border rounded-xl p-4 flex flex-col justify-center gap-1">
+                <div className="bg-card border border-border rounded-2xl p-4 flex flex-col justify-center gap-1">
                     <input type="file" accept=".xlsx,.xls,.csv" onChange={handleImport} className="hidden" id="bulkImport" disabled={importing} />
                     <label
                         htmlFor="bulkImport"
@@ -173,7 +176,7 @@ export default function ParticipantsPage({ params }: { params: Promise<{ festId:
             {error && <p className="text-red-400 text-sm">{error}</p>}
             {importResult && <p className="text-sm text-purple-400">{importResult}</p>}
 
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="bg-card border border-border rounded-2xl overflow-hidden">
                 {loading ? (
                     <div className="p-8 text-center text-muted-foreground">Loading...</div>
                 ) : participants.length === 0 ? (
@@ -198,7 +201,7 @@ export default function ParticipantsPage({ params }: { params: Promise<{ festId:
                                 </div>
                                 <div className="flex items-center gap-1">
                                     {p.hasLogin ? (
-                                        <span className="flex items-center gap-1 text-xs text-green-400 bg-green-900/20 px-2 py-1 rounded-full border border-green-900/50">
+                                        <span className="flex items-center gap-1 text-xs text-green-400 px-2 py-1">
                                             <Check className="w-3 h-3" /> Login enabled
                                         </span>
                                     ) : (
@@ -206,9 +209,9 @@ export default function ParticipantsPage({ params }: { params: Promise<{ festId:
                                             onClick={() => provisionLogin(p.id)}
                                             disabled={!p.phone || provisioningId === p.id}
                                             title={p.phone ? 'Enable student portal login' : 'Add a phone number first'}
-                                            className="flex items-center gap-1 text-xs text-blue-400 bg-blue-900/20 hover:bg-blue-900/40 disabled:opacity-40 px-2 py-1 rounded-full border border-blue-900/50 transition-all"
+                                            className="flex items-center gap-1.5 text-xs font-medium text-blue-400 bg-blue-600/20 hover:bg-blue-600/40 disabled:opacity-40 px-3 py-1.5 rounded-lg border border-blue-500/30 transition-all"
                                         >
-                                            {provisioningId === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <KeyRound className="w-3 h-3" />}
+                                            {provisioningId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <KeyRound className="w-3.5 h-3.5" />}
                                             Enable Login
                                         </button>
                                     )}

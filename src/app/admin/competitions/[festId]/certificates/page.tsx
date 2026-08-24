@@ -212,7 +212,7 @@ export default function CertificatesPage({ params }: { params: Promise<{ festId:
                 <h1 className="text-2xl font-bold text-white">Certificates &amp; Posters</h1>
             </div>
 
-            <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+            <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
                 <h2 className="text-lg font-bold text-white">Templates</h2>
                 <p className="text-xs text-muted-foreground">
                     Upload a certificate template (per participant) and a results poster template (per program, top 3). Text is composited onto fixed positions - center-focused layouts work best.
@@ -263,7 +263,7 @@ export default function CertificatesPage({ params }: { params: Promise<{ festId:
                 {message && <p className="text-sm text-purple-400">{message}</p>}
             </div>
 
-            <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+            <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                     <Award className="w-5 h-5 text-yellow-400" /> Generate
                 </h2>

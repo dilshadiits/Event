@@ -117,7 +117,7 @@ export default function AdminStandingsPage({ params }: { params: Promise<{ festI
                 </button>
             </div>
 
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="bg-card border border-border rounded-2xl overflow-hidden">
                 {loading ? (
                     <div className="p-8 text-center text-muted-foreground flex items-center justify-center gap-2">
                         <Loader2 className="w-5 h-5 animate-spin" /> Loading...
@@ -128,7 +128,7 @@ export default function AdminStandingsPage({ params }: { params: Promise<{ festI
             </div>
 
             {programs.length > 0 && (
-                <div className="bg-card border border-border rounded-xl p-4">
+                <div className="bg-card border border-border rounded-2xl p-4">
                     <p className="text-sm font-medium text-muted-foreground mb-2">Programs contributing to standings</p>
                     <div className="flex flex-wrap gap-2">
                         {programs.map(p => (

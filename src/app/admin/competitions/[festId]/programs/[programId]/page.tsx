@@ -324,7 +324,7 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
             {closeJudgingMessage && <p className="text-sm text-red-400">{closeJudgingMessage}</p>}
             {publishMessage && <p className="text-sm text-green-400">{publishMessage}</p>}
 
-            <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+            <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                     <ImageIcon className="w-5 h-5 text-cyan-400" /> Poster
                 </h2>
@@ -374,7 +374,7 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
                 </div>
             </div>
 
-            <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+            <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
                 <h2 className="text-lg font-bold text-white">Judging Criteria</h2>
                 <CriteriaBuilder criteria={criteria} onChange={setCriteria} />
                 {criteriaMessage && <p className="text-sm text-pink-400">{criteriaMessage}</p>}
@@ -388,7 +388,7 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
                 </button>
             </div>
 
-            <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+            <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                     <Gavel className="w-5 h-5 text-orange-400" /> Judge Panel
                 </h2>
@@ -427,7 +427,7 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
                 </button>
             </div>
 
-            <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+            <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                     <h2 className="text-lg font-bold text-white">Entries ({entries.length})</h2>
                     <div className="flex items-center gap-2">

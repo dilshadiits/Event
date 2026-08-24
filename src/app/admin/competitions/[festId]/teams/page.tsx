@@ -70,11 +70,13 @@ export default function TeamsPage({ params }: { params: Promise<{ festId: string
                 <Link href={`/admin/competitions/${festId}`} className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
                     <ArrowLeft className="w-6 h-6 text-muted-foreground" />
                 </Link>
-                <h1 className="text-2xl font-bold text-white">Teams</h1>
+                <h1 className="text-2xl font-bold text-white">Teams {!loading && <span className="text-muted-foreground font-normal">({teams.length})</span>}</h1>
             </div>
 
-            <form onSubmit={handleAdd} className="bg-card border border-border rounded-xl p-4 flex flex-wrap gap-3 items-end">
-                <div className="flex-1 min-w-[160px]">
+            <form onSubmit={handleAdd} className="bg-card border border-border rounded-2xl p-4 space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Add a team</p>
+                <div className="flex flex-wrap gap-3 items-end">
+                <div className="flex-1 min-w-40">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Name</label>
                     <input
                         type="text"
@@ -110,10 +112,11 @@ export default function TeamsPage({ params }: { params: Promise<{ festId: string
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                     Add Team
                 </button>
+                </div>
             </form>
             {error && <p className="text-red-400 text-sm">{error}</p>}
 
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="bg-card border border-border rounded-2xl overflow-hidden">
                 {loading ? (
                     <div className="p-8 text-center text-muted-foreground">Loading...</div>
                 ) : teams.length === 0 ? (

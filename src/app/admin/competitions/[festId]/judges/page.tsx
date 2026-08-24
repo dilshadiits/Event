@@ -67,10 +67,10 @@ export default function JudgesPage({ params }: { params: Promise<{ festId: strin
                 <Link href={`/admin/competitions/${festId}`} className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
                     <ArrowLeft className="w-6 h-6 text-muted-foreground" />
                 </Link>
-                <h1 className="text-2xl font-bold text-white">Judges &amp; Admins</h1>
+                <h1 className="text-2xl font-bold text-white">Judges &amp; Admins {!loading && <span className="text-muted-foreground font-normal">({members.length})</span>}</h1>
             </div>
 
-            <form onSubmit={handleAdd} className="bg-card border border-border rounded-xl p-6 space-y-4">
+            <form onSubmit={handleAdd} className="bg-card border border-border rounded-2xl p-6 space-y-4">
                 <h2 className="text-lg font-bold text-white">Add account</h2>
                 <div className="grid sm:grid-cols-2 gap-3">
                     <div>
@@ -131,7 +131,7 @@ export default function JudgesPage({ params }: { params: Promise<{ festId: strin
                 </button>
             </form>
 
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="bg-card border border-border rounded-2xl overflow-hidden">
                 {loading ? (
                     <div className="p-8 text-center text-muted-foreground">Loading...</div>
                 ) : members.length === 0 ? (

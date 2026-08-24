@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, use, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Plus, Loader2, ListChecks, MapPin, Calendar } from 'lucide-react';
+import { ArrowLeft, Plus, Loader2, ListChecks, MapPin, Calendar, ChevronRight } from 'lucide-react';
 import CriteriaBuilder, { Criterion } from '@/components/CriteriaBuilder';
 
 interface Program {
@@ -89,7 +89,7 @@ export default function ProgramsPage({ params }: { params: Promise<{ festId: str
                     <Link href={`/admin/competitions/${festId}`} className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
                         <ArrowLeft className="w-6 h-6 text-muted-foreground" />
                     </Link>
-                    <h1 className="text-2xl font-bold text-white">Programs</h1>
+                    <h1 className="text-2xl font-bold text-white">Programs {!loading && <span className="text-muted-foreground font-normal">({programs.length})</span>}</h1>
                 </div>
                 <button
                     onClick={() => setShowForm(!showForm)}
@@ -100,7 +100,7 @@ export default function ProgramsPage({ params }: { params: Promise<{ festId: str
             </div>
 
             {showForm && (
-                <form onSubmit={handleCreate} className="bg-card border border-border rounded-xl p-6 space-y-4 animate-in slide-in-from-top-2">
+                <form onSubmit={handleCreate} className="bg-card border border-border rounded-2xl p-6 space-y-4 animate-in slide-in-from-top-2">
                     <div className="grid sm:grid-cols-2 gap-3">
                         <div>
                             <label className="text-sm font-medium text-muted-foreground mb-1 block">Program name</label>
@@ -171,45 +171,46 @@ export default function ProgramsPage({ params }: { params: Promise<{ festId: str
                 </form>
             )}
 
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
-                {loading ? (
-                    <div className="p-8 text-center text-muted-foreground">Loading...</div>
-                ) : programs.length === 0 ? (
-                    <div className="p-8 text-center text-muted-foreground">No programs yet.</div>
-                ) : (
-                    <div className="divide-y divide-border/50">
-                        {programs.map(p => (
-                            <Link
-                                key={p.id}
-                                href={`/admin/competitions/${festId}/programs/${p.id}`}
-                                className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
-                            >
-                                <div className="flex items-center gap-3">
-                                    {p.posterUrl ? (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img src={p.posterUrl} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
-                                    ) : (
-                                        <div className="w-9 h-9 rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center shrink-0">
-                                            <ListChecks className="w-4 h-4" />
-                                        </div>
-                                    )}
-                                    <div>
-                                        <div className="font-bold text-white">{p.name}</div>
-                                        <div className="text-xs text-muted-foreground flex items-center gap-3 mt-0.5">
-                                            <span className="capitalize">{p.type} &middot; {p.mode}</span>
-                                            {p.venue && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{p.venue}</span>}
-                                            {p.scheduledAt && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{new Date(p.scheduledAt).toLocaleString()}</span>}
-                                        </div>
+            {loading ? (
+                <div className="bg-card border border-border rounded-2xl p-8 text-center text-muted-foreground">Loading...</div>
+            ) : programs.length === 0 ? (
+                <div className="bg-card border border-border rounded-2xl p-8 text-center text-muted-foreground">No programs yet.</div>
+            ) : (
+                <div className="space-y-2.5">
+                    {programs.map(p => (
+                        <Link
+                            key={p.id}
+                            href={`/admin/competitions/${festId}/programs/${p.id}`}
+                            className="group bg-card border border-border hover:border-white/20 hover:bg-white/3 rounded-xl p-4 flex items-center justify-between gap-3 transition-all"
+                        >
+                            <div className="flex items-center gap-3 min-w-0">
+                                {p.posterUrl ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={p.posterUrl} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                                ) : (
+                                    <div className="w-10 h-10 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center shrink-0">
+                                        <ListChecks className="w-4 h-4" />
+                                    </div>
+                                )}
+                                <div className="min-w-0">
+                                    <div className="font-bold text-white truncate">{p.name}</div>
+                                    <div className="text-xs text-muted-foreground flex items-center gap-3 mt-0.5 flex-wrap">
+                                        <span className="capitalize">{p.type} &middot; {p.mode}</span>
+                                        {p.venue && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{p.venue}</span>}
+                                        {p.scheduledAt && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{new Date(p.scheduledAt).toLocaleString()}</span>}
                                     </div>
                                 </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
                                 <span className={`text-xs px-2.5 py-1 rounded-full ${STATUS_STYLES[p.status] || STATUS_STYLES.scheduled}`}>
                                     {p.status.replace(/-/g, ' ')}
                                 </span>
-                            </Link>
-                        ))}
-                    </div>
-                )}
-            </div>
+                                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-white group-hover:translate-x-0.5 transition-all" />
+                            </div>
+                        </Link>
+                    ))}
+                </div>
+            )}
         </main>
     );
 }

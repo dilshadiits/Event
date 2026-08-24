@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
-import { Trophy, Plus, LogOut, Calendar, Loader2, BookOpen } from 'lucide-react';
+import { Trophy, Plus, LogOut, Calendar, Loader2, BookOpen, ChevronRight } from 'lucide-react';
 
 interface Fest {
     id: string;
@@ -77,21 +77,24 @@ export default function CompetitionsListPage() {
                         <Link
                             key={fest.id}
                             href={`/admin/competitions/${fest.id}`}
-                            className="bg-card border border-border rounded-xl p-5 hover:border-indigo-500/50 transition-all"
+                            className="group bg-card border border-border hover:border-white/20 hover:bg-white/3 rounded-xl p-5 transition-all flex items-start justify-between gap-3"
                         >
-                            <div className="flex items-start justify-between">
-                                <h3 className="text-lg font-bold text-white">{fest.name}</h3>
-                                {!fest.isActive && (
-                                    <span className="text-xs bg-white/5 text-muted-foreground px-2 py-0.5 rounded-full">Inactive</span>
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <h3 className="text-lg font-bold text-white truncate">{fest.name}</h3>
+                                    {!fest.isActive && (
+                                        <span className="text-xs bg-white/5 text-muted-foreground px-2 py-0.5 rounded-full shrink-0">Inactive</span>
+                                    )}
+                                </div>
+                                {fest.description && <p className="text-sm text-muted-foreground mt-1">{fest.description}</p>}
+                                {(fest.startDate || fest.endDate) && (
+                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-3">
+                                        <Calendar className="w-3.5 h-3.5" />
+                                        {fest.startDate}{fest.endDate ? ` – ${fest.endDate}` : ''}
+                                    </div>
                                 )}
                             </div>
-                            {fest.description && <p className="text-sm text-muted-foreground mt-1">{fest.description}</p>}
-                            {(fest.startDate || fest.endDate) && (
-                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-3">
-                                    <Calendar className="w-3.5 h-3.5" />
-                                    {fest.startDate}{fest.endDate ? ` – ${fest.endDate}` : ''}
-                                </div>
-                            )}
+                            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-white group-hover:translate-x-0.5 transition-all shrink-0 mt-1" />
                         </Link>
                     ))}
                 </div>
