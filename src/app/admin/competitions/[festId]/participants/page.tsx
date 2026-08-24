@@ -192,7 +192,7 @@ export default function ParticipantsPage({ params }: { params: Promise<{ festId:
                         {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                         Bulk Import (Excel)
                     </label>
-                    <p className="text-xs text-muted-foreground">Columns: Name, Team, Email, Phone</p>
+                    <p className="text-xs text-muted-foreground">Columns: Name, Phone (required — becomes their login password), Team, Email</p>
                 </div>
             </div>
             {error && <p className="text-red-400 text-sm">{error}</p>}

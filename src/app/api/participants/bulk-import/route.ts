@@ -5,8 +5,9 @@ import { errorResponse, successResponse, withErrorHandler, requireOrgFestAccess 
 import { isValidObjectId, sanitizeString } from '@/lib/validate';
 
 // POST /api/participants/bulk-import - multipart form: festId + Excel file
-// Expected columns: Name (required), Team (optional, matched by name within the fest),
-// Email (optional), Phone (optional).
+// Expected columns: Name (required), Phone (required - it's the student's default
+// login password, so a participant with no phone can never be given a login),
+// Team (optional, matched by name within the fest), Email (optional).
 export const POST = withErrorHandler(async (req: Request) => {
     const formData = await req.formData();
     const festId = formData.get('festId');
@@ -37,12 +38,20 @@ export const POST = withErrorHandler(async (req: Request) => {
     const teamByName = new Map(existingTeams.map(t => [t.name.toLowerCase(), t._id]));
 
     let created = 0;
-    let skipped = 0;
+    let skippedNoName = 0;
+    let skippedNoPhone = 0;
 
     for (const row of rows) {
         const name = row['Name'] || row['name'];
         if (!name || typeof name !== 'string' || !name.trim()) {
-            skipped++;
+            skippedNoName++;
+            continue;
+        }
+
+        const phoneRaw = row['Phone'] || row['phone'];
+        const phone = phoneRaw !== undefined && phoneRaw !== '' ? String(phoneRaw).trim() : '';
+        if (!phone) {
+            skippedNoPhone++;
             continue;
         }
 
@@ -51,21 +60,24 @@ export const POST = withErrorHandler(async (req: Request) => {
         const teamId = teamName ? teamByName.get(teamName.toLowerCase()) : undefined;
 
         const email = row['Email'] || row['email'];
-        const phone = row['Phone'] || row['phone'];
 
         await Participant.create({
             festId,
             teamId,
             name: sanitizeString(name.trim()),
             email: typeof email === 'string' ? email.trim() : undefined,
-            phone: phone !== undefined && phone !== '' ? String(phone).trim() : undefined,
+            phone,
         });
         created++;
     }
 
+    const skippedParts = [];
+    if (skippedNoName > 0) skippedParts.push(`${skippedNoName} missing a name`);
+    if (skippedNoPhone > 0) skippedParts.push(`${skippedNoPhone} missing a phone number`);
+
     return successResponse({
         created,
-        skipped,
-        message: `Imported ${created} participant(s)${skipped > 0 ? `, skipped ${skipped} row(s) missing a name` : ''}.`,
+        skipped: skippedNoName + skippedNoPhone,
+        message: `Imported ${created} participant(s)${skippedParts.length > 0 ? `, skipped ${skippedParts.join(' and ')}` : ''}.`,
     });
 });

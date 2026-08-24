@@ -55,7 +55,7 @@ const SECTIONS: Section[] = [
         accent: 'bg-purple-500/20 text-purple-400',
         content: (
             <div className="space-y-2 text-sm text-muted-foreground">
-                <p>Add participants one at a time, or bulk-import an Excel sheet (columns: <code className="text-white">Name</code> required, <code className="text-white">Team</code>/<code className="text-white">Email</code>/<code className="text-white">Phone</code> optional).</p>
+                <p>Add participants one at a time, or bulk-import an Excel sheet (columns: <code className="text-white">Name</code> and <code className="text-white">Phone</code> required, <code className="text-white">Team</code>/<code className="text-white">Email</code> optional). Phone is required because it becomes the student&apos;s default login password — rows without one are skipped.</p>
                 <p><strong className="text-white">A phone number alone doesn&apos;t give a student a login.</strong> On the Participants page, use <strong className="text-white">Enable Login</strong> on a participant with a phone number to create their student account. This generates a <strong className="text-white">username</strong> from their first name (e.g. &quot;Adithyan Dileep&quot; → <code className="text-white">Adithyan</code>, with a number appended if that username is already taken), and sets their <strong className="text-white">phone number as the default password</strong>. Both appear on screen once — share them with the student.</p>
                 <p>If a student forgets their password, use <strong className="text-white">Reset Password</strong> next to their name to set it back to their phone number. Students can change it themselves afterwards from their own Settings page.</p>
             </div>
