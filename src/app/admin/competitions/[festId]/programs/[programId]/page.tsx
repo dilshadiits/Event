@@ -1,9 +1,10 @@
 'use client';
 import { useEffect, useState, use, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Check, Gavel, Shuffle, Plus, Trash2, QrCode, CheckCircle2, ExternalLink, ScanLine, Upload, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Loader2, Check, Gavel, Shuffle, Plus, Trash2, QrCode, CheckCircle2, ExternalLink, ScanLine, Upload, Image as ImageIcon, ClipboardList, ChevronDown } from 'lucide-react';
 import CriteriaBuilder, { Criterion } from '@/components/CriteriaBuilder';
 import QRCodeModal from '@/components/QRCodeModal';
+import EntryScorePanel from '@/components/EntryScorePanel';
 
 interface Judge {
     id: string;
@@ -61,6 +62,7 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
     const [shuffling, setShuffling] = useState(false);
     const [shuffleMessage, setShuffleMessage] = useState('');
     const [chestCardEntry, setChestCardEntry] = useState<Entry | null>(null);
+    const [expandedScoreEntryId, setExpandedScoreEntryId] = useState<string | null>(null);
     const [closingJudging, setClosingJudging] = useState(false);
     const [closeJudgingMessage, setCloseJudgingMessage] = useState('');
     const [publishing, setPublishing] = useState(false);
@@ -491,47 +493,65 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
                     <p className="text-sm text-muted-foreground">No entries yet.</p>
                 ) : (
                     <div className="divide-y divide-border/50">
-                        {[...entries].sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999)).map(entry => (
-                            <div key={entry.id} className="py-3 flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-sm shrink-0">
-                                        {entry.chestNumber || '-'}
-                                    </div>
-                                    <div>
-                                        <div className="font-medium text-white flex items-center gap-2">
-                                            {entry.name}
-                                            {entry.rank && (
-                                                <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">
-                                                    Rank #{entry.rank}
-                                                </span>
-                                            )}
+                        {[...entries].sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999)).map(entry => {
+                            const scoresOpen = expandedScoreEntryId === entry.id;
+                            return (
+                                <div key={entry.id}>
+                                    <div className="py-3 flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-sm shrink-0">
+                                                {entry.chestNumber || '-'}
+                                            </div>
+                                            <div>
+                                                <div className="font-medium text-white flex items-center gap-2">
+                                                    {entry.name}
+                                                    {entry.rank && (
+                                                        <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">
+                                                            Rank #{entry.rank}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {entry.checkedIn && (
+                                                    <span className="flex items-center gap-1 text-xs text-green-400">
+                                                        <CheckCircle2 className="w-3 h-3" /> Checked in
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
-                                        {entry.checkedIn && (
-                                            <span className="flex items-center gap-1 text-xs text-green-400">
-                                                <CheckCircle2 className="w-3 h-3" /> Checked in
-                                            </span>
-                                        )}
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            {entry.chestNumber && (
+                                                <button
+                                                    onClick={() => setExpandedScoreEntryId(scoresOpen ? null : entry.id)}
+                                                    className={`p-2 rounded-lg transition-all flex items-center gap-1 ${scoresOpen ? 'text-cyan-400 bg-cyan-500/10' : 'text-muted-foreground hover:text-white hover:bg-white/10'}`}
+                                                    title="View / edit judge scores"
+                                                >
+                                                    <ClipboardList className="w-5 h-5" />
+                                                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${scoresOpen ? 'rotate-180' : ''}`} />
+                                                </button>
+                                            )}
+                                            {entry.chestNumber && (
+                                                <button
+                                                    onClick={() => setChestCardEntry(entry)}
+                                                    className="p-2 text-muted-foreground hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                                                    title="View chest card QR"
+                                                >
+                                                    <QrCode className="w-5 h-5" />
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => removeEntry(entry.id)}
+                                                className="p-2 text-muted-foreground hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-1 shrink-0">
-                                    {entry.chestNumber && (
-                                        <button
-                                            onClick={() => setChestCardEntry(entry)}
-                                            className="p-2 text-muted-foreground hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                                            title="View chest card QR"
-                                        >
-                                            <QrCode className="w-5 h-5" />
-                                        </button>
+                                    {scoresOpen && (
+                                        <EntryScorePanel programId={programId} entryId={entry.id} onChanged={fetchProgram} />
                                     )}
-                                    <button
-                                        onClick={() => removeEntry(entry.id)}
-                                        className="p-2 text-muted-foreground hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-                                    >
-                                        <Trash2 className="w-5 h-5" />
-                                    </button>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>

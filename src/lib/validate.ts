@@ -232,6 +232,10 @@ export const shuffleProgramSchema = z.object({
 // (need the program's criteria loaded), so that check happens in the route handler.
 export const submitScoreSchema = z.object({
     entryId: z.string().min(1, 'Entry ID is required'),
+    // Only honored when the caller is an admin (super-admin/product-admin/event-admin) -
+    // lets them enter or correct a score on behalf of a specific judge. Omitted (or equal
+    // to the caller's own id), the score is submitted as the caller's own.
+    judgeId: z.string().optional(),
     criteriaScores: z.record(z.string(), z.number().min(0)),
 });
 
