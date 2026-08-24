@@ -116,8 +116,8 @@ export const POST = withErrorHandler(async (req: Request) => {
         }
     }
 
-    // Create the vote - admin votes count as 20
-    const ADMIN_VOTE_WEIGHT = 20;
+    // Create the vote - admin votes count as 100
+    const ADMIN_VOTE_WEIGHT = 100;
     const vote = await Vote.create({
         categoryId: validated.categoryId,
         eventId: validated.awardEventId,
