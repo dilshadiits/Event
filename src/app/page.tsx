@@ -134,7 +134,12 @@ export default function Home() {
             <span>Scan</span>
           </Link>
           <button
-            onClick={() => {
+            onClick={async () => {
+              try {
+                await fetch('/api/logout', { method: 'POST' });
+              } catch (e) {
+                console.error('Logout API failed', e);
+              }
               localStorage.removeItem('admin_session_v2');
               window.dispatchEvent(new Event('storage'));
               window.location.reload();
