@@ -140,7 +140,7 @@ export default function Home() {
               } catch (e) {
                 console.error('Logout API failed', e);
               }
-              localStorage.removeItem('admin_session_v2');
+              localStorage.removeItem('admin_session_v3');
               window.dispatchEvent(new Event('storage'));
               window.location.reload();
             }}

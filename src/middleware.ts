@@ -68,7 +68,7 @@ export async function middleware(request: NextRequest) {
 
   // Verify the token
   try {
-    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'super123';
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'king@2026';
     const secret = process.env.NEXTAUTH_SECRET || 'fallback_secret';
     
     const encoder = new TextEncoder();

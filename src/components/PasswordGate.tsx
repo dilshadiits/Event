@@ -31,7 +31,7 @@ const subscribe = (callback: () => void) => {
     return () => window.removeEventListener('storage', callback);
 };
 
-const APP_STORAGE_KEY = 'admin_session_v2';
+const APP_STORAGE_KEY = 'admin_session_v3';
 
 // Get auth token from localStorage
 const getSnapshot = () => {

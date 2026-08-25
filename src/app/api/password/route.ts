@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
 
         // Get credentials from environment or defaults
         const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-        const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'super123';
+        const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'king@2026';
 
         if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
             // Generate a secure token
