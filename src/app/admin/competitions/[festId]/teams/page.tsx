@@ -2,6 +2,7 @@
 import { useEffect, useState, use, useCallback } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Plus, Trash2, Loader2, Users } from 'lucide-react';
+import AdminBreadcrumbs from '@/components/AdminBreadcrumbs';
 
 interface Team {
     id: string;
@@ -13,6 +14,7 @@ interface Team {
 export default function TeamsPage({ params }: { params: Promise<{ festId: string }> }) {
     const { festId } = use(params);
     const [teams, setTeams] = useState<Team[]>([]);
+    const [festName, setFestName] = useState('');
     const [loading, setLoading] = useState(true);
     const [name, setName] = useState('');
     const [code, setCode] = useState('');
@@ -33,6 +35,9 @@ export default function TeamsPage({ params }: { params: Promise<{ festId: string
     }, [festId]);
 
     useEffect(() => { fetchTeams(); }, [fetchTeams]);
+    useEffect(() => {
+        fetch(`/api/fests/${festId}`).then(res => res.json()).then(data => setFestName(data?.name || ''));
+    }, [festId]);
 
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -66,11 +71,18 @@ export default function TeamsPage({ params }: { params: Promise<{ festId: string
 
     return (
         <main className="min-h-screen p-4 md:p-8 max-w-3xl mx-auto space-y-6">
-            <div className="flex items-center gap-4">
-                <Link href={`/admin/competitions/${festId}`} className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
-                    <ArrowLeft className="w-6 h-6 text-muted-foreground" />
-                </Link>
-                <h1 className="text-2xl font-bold text-white">Teams {!loading && <span className="text-muted-foreground font-normal">({teams.length})</span>}</h1>
+            <div className="space-y-1">
+                <AdminBreadcrumbs items={[
+                    { label: 'Competitions', href: '/admin/competitions' },
+                    { label: festName || 'Fest', href: `/admin/competitions/${festId}` },
+                    { label: 'Teams' },
+                ]} />
+                <div className="flex items-center gap-4">
+                    <Link href={`/admin/competitions/${festId}`} className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
+                        <ArrowLeft className="w-6 h-6 text-muted-foreground" />
+                    </Link>
+                    <h1 className="text-2xl font-bold text-white">Teams {!loading && <span className="text-muted-foreground font-normal">({teams.length})</span>}</h1>
+                </div>
             </div>
 
             <form onSubmit={handleAdd} className="bg-card border border-border rounded-2xl p-4 space-y-3">

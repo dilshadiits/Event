@@ -3,6 +3,7 @@ import { useEffect, useState, use, useCallback } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { ArrowLeft, Plus, Loader2, Gavel, ShieldCheck } from 'lucide-react';
+import AdminBreadcrumbs from '@/components/AdminBreadcrumbs';
 
 interface Member {
     id: string;
@@ -18,6 +19,7 @@ export default function JudgesPage({ params }: { params: Promise<{ festId: strin
     const isSuperAdmin = session?.user?.role === 'super-admin';
 
     const [members, setMembers] = useState<Member[]>([]);
+    const [festName, setFestName] = useState('');
     const [loading, setLoading] = useState(true);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -39,6 +41,9 @@ export default function JudgesPage({ params }: { params: Promise<{ festId: strin
     }, [festId]);
 
     useEffect(() => { fetchMembers(); }, [fetchMembers]);
+    useEffect(() => {
+        fetch(`/api/fests/${festId}`).then(res => res.json()).then(data => setFestName(data?.name || ''));
+    }, [festId]);
 
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -63,11 +68,18 @@ export default function JudgesPage({ params }: { params: Promise<{ festId: strin
 
     return (
         <main className="min-h-screen p-4 md:p-8 max-w-3xl mx-auto space-y-6">
-            <div className="flex items-center gap-4">
-                <Link href={`/admin/competitions/${festId}`} className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
-                    <ArrowLeft className="w-6 h-6 text-muted-foreground" />
-                </Link>
-                <h1 className="text-2xl font-bold text-white">Judges &amp; Admins {!loading && <span className="text-muted-foreground font-normal">({members.length})</span>}</h1>
+            <div className="space-y-1">
+                <AdminBreadcrumbs items={[
+                    { label: 'Competitions', href: '/admin/competitions' },
+                    { label: festName || 'Fest', href: `/admin/competitions/${festId}` },
+                    { label: 'Judges & Admins' },
+                ]} />
+                <div className="flex items-center gap-4">
+                    <Link href={`/admin/competitions/${festId}`} className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
+                        <ArrowLeft className="w-6 h-6 text-muted-foreground" />
+                    </Link>
+                    <h1 className="text-2xl font-bold text-white">Judges &amp; Admins {!loading && <span className="text-muted-foreground font-normal">({members.length})</span>}</h1>
+                </div>
             </div>
 
             <form onSubmit={handleAdd} className="bg-card border border-border rounded-2xl p-6 space-y-4">

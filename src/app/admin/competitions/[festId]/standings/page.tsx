@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft, Loader2, RefreshCw, Globe, Copy, Check, QrCode } from 'lucide-react';
 import StandingsTable from '@/components/StandingsTable';
 import StandingsQRModal from '@/components/StandingsQRModal';
+import AdminBreadcrumbs from '@/components/AdminBreadcrumbs';
 
 interface Standing {
     teamId: string;
@@ -75,11 +76,18 @@ export default function AdminStandingsPage({ params }: { params: Promise<{ festI
 
     return (
         <main className="min-h-screen p-4 md:p-8 max-w-2xl mx-auto space-y-6">
-            <div className="flex items-center gap-4">
-                <Link href={`/admin/competitions/${festId}`} className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
-                    <ArrowLeft className="w-6 h-6 text-muted-foreground" />
-                </Link>
-                <h1 className="text-2xl font-bold text-white">Championship Standings</h1>
+            <div className="space-y-1">
+                <AdminBreadcrumbs items={[
+                    { label: 'Competitions', href: '/admin/competitions' },
+                    { label: festName || 'Fest', href: `/admin/competitions/${festId}` },
+                    { label: 'Standings' },
+                ]} />
+                <div className="flex items-center gap-4">
+                    <Link href={`/admin/competitions/${festId}`} className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
+                        <ArrowLeft className="w-6 h-6 text-muted-foreground" />
+                    </Link>
+                    <h1 className="text-2xl font-bold text-white">Championship Standings</h1>
+                </div>
             </div>
 
             <div className="flex flex-wrap gap-2">

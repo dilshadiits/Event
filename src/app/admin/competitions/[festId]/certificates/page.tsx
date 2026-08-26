@@ -2,6 +2,7 @@
 import { useEffect, useState, use, useCallback } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, Download, Trash2, Award, ImageIcon } from 'lucide-react';
+import AdminBreadcrumbs from '@/components/AdminBreadcrumbs';
 import { loadImage, compositeOverlays, downloadCanvasAsPng, type Overlay } from '@/lib/certificateGen';
 
 interface ProgramOption {
@@ -205,11 +206,18 @@ export default function CertificatesPage({ params }: { params: Promise<{ festId:
 
     return (
         <main className="min-h-screen p-4 md:p-8 max-w-3xl mx-auto space-y-6">
-            <div className="flex items-center gap-4">
-                <Link href={`/admin/competitions/${festId}`} className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
-                    <ArrowLeft className="w-6 h-6 text-muted-foreground" />
-                </Link>
-                <h1 className="text-2xl font-bold text-white">Certificates &amp; Posters</h1>
+            <div className="space-y-1">
+                <AdminBreadcrumbs items={[
+                    { label: 'Competitions', href: '/admin/competitions' },
+                    { label: festName || 'Fest', href: `/admin/competitions/${festId}` },
+                    { label: 'Certificates & Posters' },
+                ]} />
+                <div className="flex items-center gap-4">
+                    <Link href={`/admin/competitions/${festId}`} className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
+                        <ArrowLeft className="w-6 h-6 text-muted-foreground" />
+                    </Link>
+                    <h1 className="text-2xl font-bold text-white">Certificates &amp; Posters</h1>
+                </div>
             </div>
 
             <div className="bg-card border border-border rounded-2xl p-6 space-y-4">

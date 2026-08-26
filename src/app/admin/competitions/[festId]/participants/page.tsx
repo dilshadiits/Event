@@ -2,6 +2,7 @@
 import { useEffect, useState, use, useCallback } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Plus, Trash2, Loader2, Upload, UserSquare2, KeyRound, Check, RotateCcw } from 'lucide-react';
+import AdminBreadcrumbs from '@/components/AdminBreadcrumbs';
 
 interface Team {
     id: string;
@@ -23,6 +24,7 @@ export default function ParticipantsPage({ params }: { params: Promise<{ festId:
     const { festId } = use(params);
     const [participants, setParticipants] = useState<Participant[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
+    const [festName, setFestName] = useState('');
     const [loading, setLoading] = useState(true);
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
@@ -52,6 +54,9 @@ export default function ParticipantsPage({ params }: { params: Promise<{ festId:
     }, [festId]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
+    useEffect(() => {
+        fetch(`/api/fests/${festId}`).then(res => res.json()).then(data => setFestName(data?.name || ''));
+    }, [festId]);
 
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -131,11 +136,18 @@ export default function ParticipantsPage({ params }: { params: Promise<{ festId:
 
     return (
         <main className="min-h-screen p-4 md:p-8 max-w-4xl mx-auto space-y-6">
-            <div className="flex items-center gap-4">
-                <Link href={`/admin/competitions/${festId}`} className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
-                    <ArrowLeft className="w-6 h-6 text-muted-foreground" />
-                </Link>
-                <h1 className="text-2xl font-bold text-white">Participants {!loading && <span className="text-muted-foreground font-normal">({participants.length})</span>}</h1>
+            <div className="space-y-1">
+                <AdminBreadcrumbs items={[
+                    { label: 'Competitions', href: '/admin/competitions' },
+                    { label: festName || 'Fest', href: `/admin/competitions/${festId}` },
+                    { label: 'Participants' },
+                ]} />
+                <div className="flex items-center gap-4">
+                    <Link href={`/admin/competitions/${festId}`} className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
+                        <ArrowLeft className="w-6 h-6 text-muted-foreground" />
+                    </Link>
+                    <h1 className="text-2xl font-bold text-white">Participants {!loading && <span className="text-muted-foreground font-normal">({participants.length})</span>}</h1>
+                </div>
             </div>
 
             <div className="flex flex-wrap gap-3">

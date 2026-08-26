@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, use, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Check, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Check, CheckCircle2, PartyPopper } from 'lucide-react';
 import ScoreInput from '@/components/ScoreInput';
 
 interface Criterion {
@@ -63,8 +63,23 @@ export default function JudgeScoreProgramPage({ params }: { params: Promise<{ id
         });
         const data = await res.json();
         if (res.ok) {
-            setMessage('Score submitted.');
-            fetchWorklist();
+            const freshRes = await fetch(`/api/programs/${id}/judge/entries`);
+            const freshData = await freshRes.json();
+            if (freshData?.program) {
+                setWorklist(freshData);
+                const nextUnscored = (freshData.entries as WorklistEntry[]).find(
+                    (e) => e.entryId !== activeEntryId && !e.scored
+                );
+                if (nextUnscored) {
+                    setActiveEntryId(nextUnscored.entryId);
+                    setDraftScores(nextUnscored.criteriaScores || {});
+                    setMessage('');
+                } else {
+                    setActiveEntryId(null);
+                    setDraftScores({});
+                    setMessage('');
+                }
+            }
         } else {
             setMessage(data.error || 'Failed to submit score');
         }
@@ -82,6 +97,10 @@ export default function JudgeScoreProgramPage({ params }: { params: Promise<{ id
     const activeEntry = worklist.entries.find(e => e.entryId === activeEntryId);
     const allScored = worklist.program.criteria.every(c => draftScores[c.id] !== undefined);
     const locked = worklist.program.status === 'judging-closed' || worklist.program.status === 'results-published';
+    const scoredCount = worklist.entries.filter(e => e.scored).length;
+    const totalCount = worklist.entries.length;
+    const progressPct = totalCount ? Math.round((scoredCount / totalCount) * 100) : 0;
+    const allDone = totalCount > 0 && scoredCount === totalCount;
 
     return (
         <main className="min-h-screen p-4 md:p-8 max-w-2xl mx-auto space-y-6">
@@ -89,17 +108,31 @@ export default function JudgeScoreProgramPage({ params }: { params: Promise<{ id
                 <Link href="/judge" className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
                     <ArrowLeft className="w-6 h-6 text-muted-foreground" />
                 </Link>
-                <div>
-                    <h1 className="text-2xl font-bold text-white">{worklist.program.name}</h1>
+                <div className="flex-1 min-w-0">
+                    <h1 className="text-2xl font-bold text-white truncate">{worklist.program.name}</h1>
                     <p className="text-sm text-muted-foreground">
-                        {worklist.entries.filter(e => e.scored).length}/{worklist.entries.length} scored
+                        {scoredCount}/{totalCount} scored
                     </p>
                 </div>
+            </div>
+
+            <div className="h-2 rounded-full bg-muted/30 overflow-hidden">
+                <div
+                    className={`h-full rounded-full transition-all duration-500 ${allDone ? 'bg-green-500' : 'bg-orange-500'}`}
+                    style={{ width: `${progressPct}%` }}
+                />
             </div>
 
             {locked && (
                 <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4 text-sm text-orange-400">
                     Judging is closed for this program. Scores can no longer be changed.
+                </div>
+            )}
+
+            {!locked && allDone && !activeEntry && (
+                <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-sm text-green-400 flex items-center gap-2">
+                    <PartyPopper className="w-5 h-5" />
+                    All entries scored! Tap any chest number below to review or adjust a mark.
                 </div>
             )}
 

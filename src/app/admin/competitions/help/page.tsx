@@ -5,6 +5,7 @@ import {
     ArrowLeft, BookOpen, Rocket, UserSquare2, ListChecks, Gavel,
     ClipboardCheck, ShieldCheck, Trophy, QrCode, GraduationCap, KeyRound, ChevronDown,
 } from 'lucide-react';
+import AdminBreadcrumbs from '@/components/AdminBreadcrumbs';
 
 interface Section {
     id: string;
@@ -190,17 +191,23 @@ export default function HelpPage() {
 
     return (
         <main className="min-h-screen p-4 md:p-8 max-w-3xl mx-auto space-y-6">
-            <div className="flex items-center gap-4">
-                <Link href="/admin/competitions" className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
-                    <ArrowLeft className="w-6 h-6 text-muted-foreground" />
-                </Link>
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center">
-                        <BookOpen className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-bold text-white">Help &amp; Tutorial</h1>
-                        <p className="text-sm text-muted-foreground">Running an event from setup to public results</p>
+            <div className="space-y-1">
+                <AdminBreadcrumbs items={[
+                    { label: 'Competitions', href: '/admin/competitions' },
+                    { label: 'Help & Tutorial' },
+                ]} />
+                <div className="flex items-center gap-4">
+                    <Link href="/admin/competitions" className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
+                        <ArrowLeft className="w-6 h-6 text-muted-foreground" />
+                    </Link>
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center">
+                            <BookOpen className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-bold text-white">Help &amp; Tutorial</h1>
+                            <p className="text-sm text-muted-foreground">Running an event from setup to public results</p>
+                        </div>
                     </div>
                 </div>
             </div>

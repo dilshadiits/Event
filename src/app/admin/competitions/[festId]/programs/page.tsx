@@ -3,6 +3,7 @@ import { useEffect, useState, use, useCallback } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Plus, Loader2, ListChecks, MapPin, Calendar, ChevronRight } from 'lucide-react';
 import CriteriaBuilder, { Criterion } from '@/components/CriteriaBuilder';
+import AdminBreadcrumbs from '@/components/AdminBreadcrumbs';
 
 interface Program {
     id: string;
@@ -29,6 +30,7 @@ const STATUS_STYLES: Record<string, string> = {
 export default function ProgramsPage({ params }: { params: Promise<{ festId: string }> }) {
     const { festId } = use(params);
     const [programs, setPrograms] = useState<Program[]>([]);
+    const [festName, setFestName] = useState('');
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -54,6 +56,9 @@ export default function ProgramsPage({ params }: { params: Promise<{ festId: str
     }, [festId]);
 
     useEffect(() => { fetchPrograms(); }, [fetchPrograms]);
+    useEffect(() => {
+        fetch(`/api/fests/${festId}`).then(res => res.json()).then(data => setFestName(data?.name || ''));
+    }, [festId]);
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -84,19 +89,26 @@ export default function ProgramsPage({ params }: { params: Promise<{ festId: str
 
     return (
         <main className="min-h-screen p-4 md:p-8 max-w-4xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <Link href={`/admin/competitions/${festId}`} className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
-                        <ArrowLeft className="w-6 h-6 text-muted-foreground" />
-                    </Link>
-                    <h1 className="text-2xl font-bold text-white">Programs {!loading && <span className="text-muted-foreground font-normal">({programs.length})</span>}</h1>
+            <div className="space-y-1">
+                <AdminBreadcrumbs items={[
+                    { label: 'Competitions', href: '/admin/competitions' },
+                    { label: festName || 'Fest', href: `/admin/competitions/${festId}` },
+                    { label: 'Programs' },
+                ]} />
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <Link href={`/admin/competitions/${festId}`} className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
+                            <ArrowLeft className="w-6 h-6 text-muted-foreground" />
+                        </Link>
+                        <h1 className="text-2xl font-bold text-white">Programs {!loading && <span className="text-muted-foreground font-normal">({programs.length})</span>}</h1>
+                    </div>
+                    <button
+                        onClick={() => setShowForm(!showForm)}
+                        className={`flex items-center gap-2 ${showForm ? 'bg-pink-600 text-white' : 'bg-pink-600/20 text-pink-400'} hover:bg-pink-600/40 px-4 py-2 rounded-lg text-sm font-medium transition-all border border-pink-500/30`}
+                    >
+                        <Plus className="w-4 h-4" /> New Program
+                    </button>
                 </div>
-                <button
-                    onClick={() => setShowForm(!showForm)}
-                    className={`flex items-center gap-2 ${showForm ? 'bg-pink-600 text-white' : 'bg-pink-600/20 text-pink-400'} hover:bg-pink-600/40 px-4 py-2 rounded-lg text-sm font-medium transition-all border border-pink-500/30`}
-                >
-                    <Plus className="w-4 h-4" /> New Program
-                </button>
             </div>
 
             {showForm && (

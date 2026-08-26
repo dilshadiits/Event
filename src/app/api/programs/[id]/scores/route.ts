@@ -15,6 +15,12 @@ import { submitScoreSchema, isValidObjectId } from '@/lib/validate';
 // own judgeId (enforced below), and event-admin may only use this to edit an *existing*
 // judge's entry, not add their own as an extra judge (that stays super-admin/product-admin
 // only, mirroring who else in this app is allowed to act as a judge).
+//
+// The "judging is closed" lock only blocks a *new* score from being added once a program
+// is closed/published - it does NOT block correcting a score that already exists. Without
+// that distinction, the admin score-correction feature would be unusable exactly when it's
+// needed most (fixing a mistake noticed during review, after judging has already closed or
+// results are already out).
 export const POST = withErrorHandler(async (req: Request, context: { params: Promise<{ id: string }> }) => {
     const { id } = await context.params;
     if (!isValidObjectId(id)) return errorResponse('Invalid program ID', 400);
@@ -39,10 +45,6 @@ export const POST = withErrorHandler(async (req: Request, context: { params: Pro
         }
     }
 
-    if (program.status === 'judging-closed' || program.status === 'results-published') {
-        return errorResponse('Judging is closed for this program', 400);
-    }
-
     const body = await req.json();
     const validated = submitScoreSchema.parse(body);
     if (!isValidObjectId(validated.entryId)) return errorResponse('Invalid entry ID', 400);
@@ -56,6 +58,14 @@ export const POST = withErrorHandler(async (req: Request, context: { params: Pro
         targetJudgeId = validated.judgeId;
     } else if (caller.role === 'event-admin') {
         return errorResponse('Event admins may only edit an existing judge\'s score, not submit as themselves', 403);
+    }
+
+    const isLocked = program.status === 'judging-closed' || program.status === 'results-published';
+    if (isLocked) {
+        const existingScore = await Score.exists({ programId: id, entryId: validated.entryId, judgeId: targetJudgeId });
+        if (!existingScore) {
+            return errorResponse('Judging is closed for this program - no new scores can be added, only existing ones corrected', 400);
+        }
     }
 
     const entry = await ProgramEntry.findOne({ _id: validated.entryId, programId: id });

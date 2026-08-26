@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Loader2 } from 'lucide-react';
+import AdminBreadcrumbs from '@/components/AdminBreadcrumbs';
 
 export default function NewFestPage() {
     const router = useRouter();
@@ -35,11 +36,17 @@ export default function NewFestPage() {
 
     return (
         <main className="min-h-screen p-4 md:p-8 max-w-xl mx-auto space-y-6">
+            <div className="space-y-1">
+                <AdminBreadcrumbs items={[
+                    { label: 'Competitions', href: '/admin/competitions' },
+                    { label: 'New Fest' },
+                ]} />
             <div className="flex items-center gap-4">
                 <Link href="/admin/competitions" className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
                     <ArrowLeft className="w-6 h-6 text-muted-foreground" />
                 </Link>
                 <h1 className="text-2xl font-bold text-white">New Fest</h1>
+            </div>
             </div>
 
             <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-6 space-y-4">

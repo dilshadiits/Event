@@ -2,10 +2,11 @@
 import { useEffect, useState, use, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Check, Gavel, Shuffle, Plus, Trash2, QrCode, CheckCircle2, ExternalLink, ScanLine, Upload, Image as ImageIcon, ClipboardList, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Loader2, Check, Gavel, Shuffle, Plus, Trash2, QrCode, CheckCircle2, ExternalLink, ScanLine, Upload, Image as ImageIcon, ClipboardList, ChevronDown, RefreshCw } from 'lucide-react';
 import CriteriaBuilder, { Criterion } from '@/components/CriteriaBuilder';
 import QRCodeModal from '@/components/QRCodeModal';
 import EntryScorePanel from '@/components/EntryScorePanel';
+import AdminBreadcrumbs from '@/components/AdminBreadcrumbs';
 
 interface Judge {
     id: string;
@@ -56,6 +57,7 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
     const [posterUrl, setPosterUrl] = useState('');
     const [uploadingPoster, setUploadingPoster] = useState(false);
     const [posterMessage, setPosterMessage] = useState('');
+    const [festName, setFestName] = useState('');
 
     const [entries, setEntries] = useState<Entry[]>([]);
     const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -114,6 +116,9 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
     }, [festId, programId]);
 
     useEffect(() => { fetchProgram(); }, [fetchProgram]);
+    useEffect(() => {
+        fetch(`/api/fests/${festId}`).then(res => res.json()).then(data => setFestName(data?.name || ''));
+    }, [festId]);
 
     const toggleCandidate = (id: string) => {
         setSelectedCandidateIds(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
@@ -185,8 +190,11 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
         setClosingJudging(false);
     };
 
-    const publishResults = async () => {
-        if (!confirm('Publish results for this program? This computes final ranks and makes them visible on the public results page (if the fest has public results enabled).')) return;
+    const publishResults = async (isUpdate = false) => {
+        const confirmMessage = isUpdate
+            ? 'Recompute ranks for this program? Use this after correcting a judge\'s score - it updates the public results, standings, and certificates to match.'
+            : 'Publish results for this program? This computes final ranks and makes them visible on the public results page (if the fest has public results enabled).';
+        if (!confirm(confirmMessage)) return;
         setPublishing(true);
         setPublishMessage('');
         const res = await fetch(`/api/programs/${programId}/publish-results`, { method: 'POST' });
@@ -271,6 +279,13 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
 
     return (
         <main className="min-h-screen p-4 md:p-8 max-w-3xl mx-auto space-y-6">
+            <div className="space-y-1">
+                <AdminBreadcrumbs items={[
+                    { label: 'Competitions', href: '/admin/competitions' },
+                    { label: festName || 'Fest', href: `/admin/competitions/${festId}` },
+                    { label: 'Programs', href: `/admin/competitions/${festId}/programs` },
+                    { label: program.name },
+                ]} />
             <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex items-center gap-4">
                     <Link href={`/admin/competitions/${festId}/programs`} className="p-2 hover:bg-muted rounded-lg transition-colors -ml-2">
@@ -302,7 +317,7 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
                 )}
                 {program.status === 'judging-closed' && (
                     <button
-                        onClick={publishResults}
+                        onClick={() => publishResults(false)}
                         disabled={publishing}
                         className="flex items-center gap-2 bg-green-600/20 hover:bg-green-600/40 disabled:opacity-50 text-green-400 px-4 py-2 rounded-lg text-sm font-medium transition-all border border-green-500/30"
                     >
@@ -311,15 +326,27 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
                     </button>
                 )}
                 {program.status === 'results-published' && (
-                    <Link
-                        href={`/results/${festId}/programs/${programId}`}
-                        target="_blank"
-                        className="flex items-center gap-2 bg-green-600/20 hover:bg-green-600/40 text-green-400 px-4 py-2 rounded-lg text-sm font-medium transition-all border border-green-500/30"
-                    >
-                        <ExternalLink className="w-4 h-4" />
-                        View Public Result
-                    </Link>
+                    <>
+                        <button
+                            onClick={() => publishResults(true)}
+                            disabled={publishing}
+                            title="Recompute ranks - use after correcting a judge's score"
+                            className="flex items-center gap-2 bg-muted/50 hover:bg-muted disabled:opacity-50 text-muted-foreground hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-all border border-border"
+                        >
+                            {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                            Update Results
+                        </button>
+                        <Link
+                            href={`/results/${festId}/programs/${programId}`}
+                            target="_blank"
+                            className="flex items-center gap-2 bg-green-600/20 hover:bg-green-600/40 text-green-400 px-4 py-2 rounded-lg text-sm font-medium transition-all border border-green-500/30"
+                        >
+                            <ExternalLink className="w-4 h-4" />
+                            View Public Result
+                        </Link>
+                    </>
                 )}
+            </div>
             </div>
             {closeJudgingMessage && <p className="text-sm text-red-400">{closeJudgingMessage}</p>}
             {publishMessage && <p className="text-sm text-green-400">{publishMessage}</p>}
