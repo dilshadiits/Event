@@ -58,6 +58,7 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
     const [uploadingPoster, setUploadingPoster] = useState(false);
     const [posterMessage, setPosterMessage] = useState('');
     const [festName, setFestName] = useState('');
+    const [festResultsPublic, setFestResultsPublic] = useState(true);
 
     const [entries, setEntries] = useState<Entry[]>([]);
     const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -117,7 +118,10 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
 
     useEffect(() => { fetchProgram(); }, [fetchProgram]);
     useEffect(() => {
-        fetch(`/api/fests/${festId}`).then(res => res.json()).then(data => setFestName(data?.name || ''));
+        fetch(`/api/fests/${festId}`).then(res => res.json()).then(data => {
+            setFestName(data?.name || '');
+            setFestResultsPublic(!!data?.resultsArePublic);
+        });
     }, [festId]);
 
     const toggleCandidate = (id: string) => {
@@ -350,6 +354,15 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ festId
             </div>
             {closeJudgingMessage && <p className="text-sm text-red-400">{closeJudgingMessage}</p>}
             {publishMessage && <p className="text-sm text-green-400">{publishMessage}</p>}
+            {program.status === 'results-published' && !festResultsPublic && (
+                <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4 text-sm text-orange-400">
+                    This program is published, but the fest&apos;s results are still private, so nobody outside the admin panel can see it yet.{' '}
+                    <Link href={`/admin/competitions/${festId}/standings`} className="underline font-medium hover:text-orange-300">
+                        Turn on &quot;Results are Public&quot; on the Standings page
+                    </Link>{' '}
+                    to make it visible.
+                </div>
+            )}
 
             <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
