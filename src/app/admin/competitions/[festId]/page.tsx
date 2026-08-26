@@ -3,7 +3,7 @@ import { useEffect, useState, use, useCallback } from 'react';
 import Link from 'next/link';
 import {
     ArrowLeft, Users, UserSquare2, ListChecks, Gavel, Trophy, Award,
-    Loader2, BookOpen, Calendar, Globe, CheckCircle2, ClipboardCheck, ChevronRight,
+    Loader2, BookOpen, Calendar, Globe, CheckCircle2, ClipboardCheck, ChevronRight, AlertTriangle,
 } from 'lucide-react';
 import AdminNavCard from '@/components/AdminNavCard';
 
@@ -61,6 +61,7 @@ export default function FestDashboardPage({ params }: { params: Promise<{ festId
     const [overview, setOverview] = useState<FestOverview | null>(null);
     const [standings, setStandings] = useState<Standing[]>([]);
     const [loading, setLoading] = useState(true);
+    const [togglingPublic, setTogglingPublic] = useState(false);
 
     const fetchAll = useCallback(async () => {
         try {
@@ -79,6 +80,18 @@ export default function FestDashboardPage({ params }: { params: Promise<{ festId
 
     useEffect(() => { fetchAll(); }, [fetchAll]);
 
+    const toggleResultsPublic = async () => {
+        if (!overview) return;
+        setTogglingPublic(true);
+        const res = await fetch(`/api/fests/${festId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ resultsArePublic: !overview.fest.resultsArePublic }),
+        });
+        if (res.ok) fetchAll();
+        setTogglingPublic(false);
+    };
+
     if (loading) {
         return (
             <main className="min-h-screen flex items-center justify-center text-muted-foreground gap-2">
@@ -96,6 +109,8 @@ export default function FestDashboardPage({ params }: { params: Promise<{ festId
     const checkInPct = entries.total ? Math.round((entries.checkedIn / entries.total) * 100) : 0;
     const scoredPct = entries.total ? Math.round((entries.scored / entries.total) * 100) : 0;
     const maxPoints = standings[0]?.points || 1;
+    const publishedCount = programsByStatus['results-published'] || 0;
+    const hasUnrevealedResults = publishedCount > 0 && !fest.resultsArePublic;
 
     const sections = [
         { href: `/admin/competitions/${festId}/teams`, icon: Users, label: 'Teams', count: counts.teams, accent: 'bg-blue-500/20 text-blue-400' },
@@ -129,14 +144,42 @@ export default function FestDashboardPage({ params }: { params: Promise<{ festId
                         </div>
                     </div>
                 </div>
-                <Link
-                    href="/admin/competitions/help"
-                    className="flex items-center gap-2 bg-muted/50 hover:bg-muted text-muted-foreground hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-all border border-border"
-                >
-                    <BookOpen className="w-4 h-4" />
-                    Help &amp; Tutorial
-                </Link>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={toggleResultsPublic}
+                        disabled={togglingPublic}
+                        title={fest.resultsArePublic ? 'Results are visible to the public' : 'Results are private - only visible in the admin panel'}
+                        className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border disabled:opacity-50 ${fest.resultsArePublic
+                            ? 'bg-green-600/20 text-green-400 border-green-500/30'
+                            : hasUnrevealedResults
+                                ? 'bg-orange-600/20 text-orange-400 border-orange-500/40'
+                                : 'bg-muted/50 text-muted-foreground border-border'
+                            }`}
+                    >
+                        {togglingPublic ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+                        {fest.resultsArePublic ? 'Results are Public' : 'Results are Private'}
+                        {hasUnrevealedResults && (
+                            <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-orange-500 flex items-center justify-center animate-pulse">
+                                <AlertTriangle className="w-2.5 h-2.5 text-black" />
+                            </span>
+                        )}
+                    </button>
+                    <Link
+                        href="/admin/competitions/help"
+                        className="flex items-center gap-2 bg-muted/50 hover:bg-muted text-muted-foreground hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-all border border-border"
+                    >
+                        <BookOpen className="w-4 h-4" />
+                        Help &amp; Tutorial
+                    </Link>
+                </div>
             </div>
+
+            {hasUnrevealedResults && (
+                <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4 text-sm text-orange-400 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    {publishedCount} program{publishedCount > 1 ? 's have' : ' has'} published results, but they&apos;re not visible to the public yet - click &quot;Results are Private&quot; above to make them live.
+                </div>
+            )}
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <StatTile icon={Users} label="Teams" value={counts.teams} accent="bg-blue-500/20 text-blue-400" />
